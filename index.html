@@ -532,7 +532,7 @@ function renderTable(){
             <span class="ev-pill ${p.posBB?'neutral':'neg'}">${p.posBB?'+':''}${$p(p.bbR-1)}</span>
           </td>
           <td>
-            <span style="color:${p.wr>=.5?'var(--green)':'var(--muted)';font-weight:p.wr>=.5?700:400}">${$p(p.wr)}</span>
+            <span style="color:${p.wr>=.5?'var(--green)':'var(--muted)'};font-weight:${p.wr>=.5?700:400}">${$p(p.wr)}</span>
           </td>
           <td style="color:${c};font-weight:600">${$f(p.avg)}</td>
           <td style="color:${p.posBB?'var(--blue)':'var(--red)'};font-weight:600">${$f(p.bb)}</td>
