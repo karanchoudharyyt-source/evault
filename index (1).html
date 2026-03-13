@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EVault — Real EV Tracker for Courtyard Packs</title>
+<meta name="description" content="See the real expected value of every Courtyard mystery pack — including actual cash after buyback fees. Free, live, no signup."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #05050f;
+  --bg2: #08081a;
+  --bg3: #0b0b1f;
+  --border: #111128;
+  --border2: #181838;
+  --text: #e8e8f4;
+  --text2: #6666aa;
+  --text3: #2a2a55;
+  --green: #00e676;
+  --green2: #00c853;
+  --red: #ff1744;
+  --blue: #2979ff;
+  --yellow: #ffd600;
+  --radius: 12px;
+  --radius2: 8px;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #1a1a3a; border-radius: 2px; }
+
+/* Layout */
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* Header */
+.hdr {
+  height: 60px; flex-shrink: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 16px;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.logo-text { font-weight: 900; font-size: 20px; color: #fff; letter-spacing: -0.5px; }
+.logo-sub { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--text3); letter-spacing: 2px; margin-top: 1px; }
+
+.nav {
+  display: flex; gap: 2px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px;
+}
+.nav-btn {
+  padding: 6px 16px; border-radius: 8px; border: none; cursor: pointer;
+  background: transparent; color: var(--text3);
+  font-family: 'Inter', sans-serif; font-weight: 600; font-size: 12px;
+  transition: all .15s; white-space: nowrap;
+}
+.nav-btn.on { background: var(--green); color: #000; }
+
+.live-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 99px;
+  background: rgba(0,230,118,.07); border: 1px solid rgba(0,230,118,.2);
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.live-dot.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.stat-pill {
+  padding: 5px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: center;
+}
+.stat-pill-label { font-size: 7px; font-family: 'JetBrains Mono', monospace; color: var(--text3); letter-spacing: 1.5px; display: block; margin-bottom: 2px; text-transform: uppercase; }
+.stat-pill-val { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; line-height: 1; }
+
+/* Body */
+.body { flex: 1; display: flex; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Toolbar */
+.toolbar {
+  flex-shrink: 0; padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.pill-btn {
+  padding: 4px 12px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text3); font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  transition: all .12s;
+}
+.pill-btn.on { border-color: rgba(0,230,118,.5); background: rgba(0,230,118,.08); color: var(--green); }
+.sort-btn {
+  padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer;
+  background: transparent; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: all .12s;
+}
+.sort-btn.on { background: var(--bg3); color: var(--text2); }
+.flt-btn {
+  padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer;
+  background: transparent; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: all .12s;
+}
+.flt-btn.on { background: var(--bg3); color: var(--text); }
+
+/* Content */
+.content { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* Pack grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+
+/* Pack card */
+.pcard {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; position: relative; overflow: hidden;
+  transition: border-color .15s, background .15s;
+  animation: fadeUp .2s ease;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+.pcard:hover { border-color: var(--border2); background: var(--bg3); }
+.pcard.sel { border-color: rgba(0,230,118,.45); background: rgba(0,230,118,.025); }
+.cat-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 12px 0 0 12px; }
+
+.ev-badge {
+  padding: 4px 10px; border-radius: 99px;
+  font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.ev-badge.pos { background: rgba(0,230,118,.12); border: 1px solid rgba(0,230,118,.4); color: var(--green); }
+.ev-badge.neg { background: rgba(255,23,68,.09); border: 1px solid rgba(255,23,68,.3); color: var(--red); }
+
+/* EV bars */
+.bar-wrap { height: 5px; background: var(--bg); border-radius: 3px; position: relative; overflow: hidden; margin-bottom: 3px; }
+.bar-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border2); }
+.bar-fill { position: absolute; height: 100%; border-radius: 3px; transition: width .5s ease; }
+
+/* Expanded detail */
+.detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); animation: fadeUp .2s ease; }
+.detail-section { margin-bottom: 14px; }
+.detail-label { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+.fee-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.fee-row:last-child { border: none; }
+.fee-row.total { font-weight: 700; padding-top: 8px; }
+.pull-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.pull-row:last-child { border: none; }
+.buy-btn {
+  display: block; text-align: center; margin-top: 12px; padding: 11px;
+  border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 13px;
+  border: none; cursor: pointer; transition: opacity .15s;
+}
+.buy-btn:hover { opacity: .85; }
+
+/* Leaderboard */
+.lb-row {
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 8px; cursor: pointer; transition: border-color .15s;
+  animation: fadeUp .2s ease;
+}
+.lb-row:hover { border-color: var(--border2); }
+
+/* Feed */
+.feed-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.feed-row { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; }
+.feed-row:last-child { border: none; }
+.avatar { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+
+/* Loading / Error */
+.center { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { font-size: 36px; animation: spin 1.2s linear infinite; display: inline-block; }
+
+/* Footer */
+.footer {
+  height: 38px; flex-shrink: 0; background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
+}
+
+/* Sparkline SVG util */
+.spark { display: block; overflow: visible; flex-shrink: 0; }
+
+/* Unique callout */
+.unique-tag {
+  display: inline-block; font-size: 8px; font-family: 'JetBrains Mono', monospace;
+  padding: 1px 6px; border-radius: 3px; background: rgba(41,121,255,.15);
+  border: 1px solid rgba(41,121,255,.3); color: var(--blue); letter-spacing: .5px;
+  margin-left: 6px; vertical-align: middle;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .hdr { gap: 10px; padding: 0 12px; }
+  .stat-pill { display: none; }
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo-icon">⚡</div>
+  <div style="margin-right:4px">
+    <div class="logo-text">EVault</div>
+    <div class="logo-sub">COURTYARD EV TRACKER</div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn on" id="nav-packs" onclick="goTab('packs')">◈ Packs</button>
+    <button class="nav-btn" id="nav-lb" onclick="goTab('lb')">◉ Ranking</button>
+    <button class="nav-btn" id="nav-feed" onclick="goTab('feed')">◌ Live Feed</button>
+  </div>
+
+  <div class="live-pill">
+    <div class="live-dot" id="live-dot"></div>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green)" id="live-label">LOADING</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3)" id="cd-txt"></span>
+  </div>
+
+  <div style="flex:1"></div>
+
+  <div style="display:flex;gap:8px">
+    <div class="stat-pill">
+      <span class="stat-pill-label">+EV PACKS</span>
+      <span class="stat-pill-val" id="hdr-pos" style="color:var(--green)">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-pill-label">BUYBACK +EV</span>
+      <span class="stat-pill-val" id="hdr-bb" style="color:var(--blue)">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="stat-pill-label">PULLS TODAY</span>
+      <span class="stat-pill-val" id="hdr-pulls" style="color:var(--text2)">—</span>
+    </div>
+  </div>
+
+  <button onclick="doLoad()" style="padding:7px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;" id="refresh-btn">↻</button>
+</header>
+
+<!-- BODY -->
+<div class="body">
+  <div class="main">
+
+    <!-- TOOLBAR -->
+    <div class="toolbar" id="toolbar">
+      <div id="cat-pills" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      <div style="display:flex;gap:2px;padding:2px 4px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">
+        <button class="flt-btn on" id="flt-all" onclick="setFlt('all')">All</button>
+        <button class="flt-btn" id="flt-pos" onclick="setFlt('pos')">+EV</button>
+        <button class="flt-btn" id="flt-neg" onclick="setFlt('neg')">−EV</button>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:3px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-right:2px">SORT</span>
+        <button class="sort-btn on" id="sort-fmv" onclick="setSort('fmv')">FMV EV</button>
+        <button class="sort-btn" id="sort-bb" onclick="setSort('bb')">Buyback</button>
+        <button class="sort-btn" id="sort-wr" onclick="setSort('wr')">Win%</button>
+        <button class="sort-btn" id="sort-pr" onclick="setSort('pr')">Price</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content" id="content">
+      <div class="center">
+        <span class="spinner">⚡</span>
+        <div style="font-weight:700;font-size:15px">Loading live data...</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)">Fetching from Courtyard API</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3)">
+    Buyback EV = FMV × 0.90 × 0.94 · Real cost = $26.86 (not $25) · Not affiliated with Courtyard.io
+    <span class="unique-tag">DATA PULLD DOESN'T SHOW</span>
+  </span>
+  <div style="display:flex;align-items:center;gap:6px;padding:3px 12px;background:rgba(88,101,242,.08);border:1px solid rgba(88,101,242,.18);border-radius:7px">
+    <span style="font-size:12px">🤖</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5865f2">Discord: /ev /pack /alert — coming soon</span>
+  </div>
+</footer>
+
+</div><!-- .app -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const BB_MULT   = 0.9 * 0.94;   // Courtyard: 90% offer, then 6% processing fee
+const TRUE_COST = 26.86;        // Actual charged price for $25 packs (7.4% markup)
+
+const CAT_COLORS = {
+  'Pokémon':    '#f6c90e',
+  'Baseball':   '#e85d04',
+  'Basketball': '#f77f00',
+  'Hockey':     '#4cc9f0',
+  'Football':   '#80b918',
+  'Soccer':     '#2dc653',
+  'Sports':     '#ff6b6b',
+  'Magic':      '#9d4edd',
+  'Comics':     '#ff4081',
+  'Watch':      '#78909c',
+};
+
+const PACK_CFG = {
+  'pkmn-basic-pack':         { name:'Pokémon Basic',        price:10,   cat:'Pokémon'    },
+  'pkmn-starter-pack':       { name:'Pokémon Starter',      price:25,   cat:'Pokémon'    },
+  'pkmn-pro-pack':           { name:'Pokémon Pro',          price:50,   cat:'Pokémon'    },
+  'pkmn-master-pack':        { name:'Pokémon Master',       price:100,  cat:'Pokémon'    },
+  'pkmn-diamond-pack':       { name:'Pokémon Diamond',      price:500,  cat:'Pokémon'    },
+  'baseball-starter-pack':   { name:'Baseball Starter',     price:25,   cat:'Baseball'   },
+  'baseball-pro-pack':       { name:'Baseball Pro',         price:50,   cat:'Baseball'   },
+  'baseball-master-pack':    { name:'Baseball Master',      price:100,  cat:'Baseball'   },
+  'basketball-starter-pack': { name:'Basketball Starter',   price:25,   cat:'Basketball' },
+  'basketball-pro-pack':     { name:'Basketball Pro',       price:50,   cat:'Basketball' },
+  'basketball-master-pack':  { name:'Basketball Master',    price:100,  cat:'Basketball' },
+  'hockey-starter-pack':     { name:'Hockey Starter',       price:25,   cat:'Hockey'     },
+  'hockey-pro-pack':         { name:'Hockey Pro',           price:50,   cat:'Hockey'     },
+  'hockey-master-pack':      { name:'Hockey Master',        price:100,  cat:'Hockey'     },
+  'football-starter-pack':   { name:'Football Starter',     price:25,   cat:'Football'   },
+  'football-pro-pack':       { name:'Football Pro',         price:50,   cat:'Football'   },
+  'football-master-pack':    { name:'Football Master',      price:100,  cat:'Football'   },
+  'soccer-starter-pack':     { name:'Soccer Starter',       price:25,   cat:'Soccer'     },
+  'soccer-pro-pack':         { name:'Soccer Pro',           price:50,   cat:'Soccer'     },
+  'sports-legend-pack':      { name:'Sports Legend',        price:100,  cat:'Sports'     },
+  'magic-booster-pack':      { name:'Magic: The Gathering', price:10,   cat:'Magic'      },
+  'cgc-comics-pack':         { name:'CGC Comics',           price:200,  cat:'Comics'     },
+  'premier-watch-box':       { name:'Premier Watch Box',    price:500,  cat:'Watch'      },
+};
+
+const EV_MAP = {
+  'Pokémon Basic Pack':'pkmn-basic-pack','Pokémon Basic':'pkmn-basic-pack',
+  'Pokémon Starter Pack':'pkmn-starter-pack','Pokémon Starter':'pkmn-starter-pack',
+  'Pokémon Pro Pack':'pkmn-pro-pack','Pokémon Pro':'pkmn-pro-pack',
+  'Pokémon Master Pack':'pkmn-master-pack','Pokémon Master':'pkmn-master-pack',
+  'Pokémon Diamond Pack':'pkmn-diamond-pack','Pokémon Diamond':'pkmn-diamond-pack',
+  'Baseball Starter Pack':'baseball-starter-pack','Baseball Starter':'baseball-starter-pack',
+  'Baseball Pro Pack':'baseball-pro-pack','Baseball Pro':'baseball-pro-pack',
+  'Baseball Master Pack':'baseball-master-pack','Baseball Master':'baseball-master-pack',
+  'Basketball Starter Pack':'basketball-starter-pack','Basketball Starter':'basketball-starter-pack',
+  'Basketball Pro Pack':'basketball-pro-pack','Basketball Pro':'basketball-pro-pack',
+  'Basketball Master Pack':'basketball-master-pack','Basketball Master':'basketball-master-pack',
+  'Hockey Starter Pack':'hockey-starter-pack','Hockey Starter':'hockey-starter-pack',
+  'Hockey Pro Pack':'hockey-pro-pack','Hockey Pro':'hockey-pro-pack',
+  'Hockey Master Pack':'hockey-master-pack','Hockey Master':'hockey-master-pack',
+  'Football Starter Pack':'football-starter-pack','Football Starter':'football-starter-pack',
+  'Football Pro Pack':'football-pro-pack','Football Pro':'football-pro-pack',
+  'Football Master Pack':'football-master-pack','Football Master':'football-master-pack',
+  'Soccer Starter Pack':'soccer-starter-pack','Soccer Starter':'soccer-starter-pack',
+  'Soccer Pro Pack':'soccer-pro-pack','Soccer Pro':'soccer-pro-pack',
+  'Sports Legend Pack':'sports-legend-pack','Sports Legend':'sports-legend-pack',
+  'Sealed Magic: The Gathering Booster':'magic-booster-pack','Magic: The Gathering':'magic-booster-pack',
+  'CGC Comics':'cgc-comics-pack','Premier Watch Box':'premier-watch-box',
+};
+
+function getPackId(asset) {
+  const ev = asset.attributes?.find(x => x.name === 'Event')?.value || '';
+  if (EV_MAP[ev]) return EV_MAP[ev];
+  const lo = ev.toLowerCase();
+  for (const [k, v] of Object.entries(EV_MAP))
+    if (lo.includes(k.toLowerCase())) return v;
+  return null;
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {
+  tab: 'packs', cat: 'All', sort: 'fmv', flt: 'all', sel: null,
+  packs: [], feed: [], rawCount: 0,
+};
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+const $f  = n => '$' + (+n).toFixed(2);
+const $p  = n => (n * 100).toFixed(1) + '%';
+const ago = ts => {
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  return s < 60 ? s + 's ago' : s < 3600 ? Math.floor(s/60) + 'm ago' : Math.floor(s/3600) + 'h ago';
+};
+
+function sparkSVG(vals, color, W, H) {
+  if (!vals || vals.length < 2) return '';
+  const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1;
+  const pts = vals.map((v, i) =>
+    `${Math.round(i / (vals.length - 1) * W)},${Math.round(H - ((v - mn) / r) * (H - 5) - 2)}`
+  ).join(' ');
+  const lx = W, ly = Math.round(H - ((vals[vals.length-1] - mn) / r) * (H-5) - 2);
+  return `<svg class="spark" width="${W}" height="${H}">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lx}" cy="${ly}" r="3" fill="${color}"/>
+  </svg>`;
+}
+
+function evBar(ratio, posColor, negColor) {
+  const pos = ratio >= 1;
+  const pct = Math.min(Math.abs(ratio - 1) / 0.8 * 50, 50);
+  const col = pos ? posColor : negColor;
+  return `<div class="bar-wrap">
+    <div class="bar-mid"></div>
+    <div class="bar-fill" style="width:${pct}%;${pos ? 'left:50%' : 'right:50%'};background:${col}"></div>
+  </div>`;
+}
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+function buildPacks(assets) {
+  const m = {};
+  for (const a of assets) {
+    const id = getPackId(a);
+    if (!id || !PACK_CFG[id]) continue;
+    const fmv = a.fmv_estimate_usd || 0;
+    if (!fmv) continue;
+    if (!m[id]) m[id] = { fmvs: [], raw: [] };
+    m[id].fmvs.push(fmv);
+    m[id].raw.push(a);
+  }
+
+  return Object.entries(m).map(([id, d]) => {
+    const cfg = PACK_CFG[id];
+    const n = d.fmvs.length;
+    const avg = d.fmvs.reduce((a, b) => a + b, 0) / n;
+    const bb  = avg * BB_MULT;
+    const fmvR = avg / cfg.price;
+    const bbR  = bb  / cfg.price;
+    // True cost for $25 packs is ~$26.86
+    const trueCost = cfg.price === 25 ? TRUE_COST : cfg.price;
+    const trueFmvR = avg / trueCost;
+    const pulls = d.raw.slice(0, 5).map(a => ({
+      card:   a.attributes?.find(x => x.name === 'Title/Subject')?.value || '—',
+      grader: a.attributes?.find(x => x.name === 'Grader')?.value || '',
+      grade:  a.attributes?.find(x => x.name === 'Grade')?.value  || '',
+      fmv:    a.fmv_estimate_usd || 0,
+      user:   a.owner?.username || 'anon',
+      time:   a.tx_time,
+    }));
+    return {
+      ...cfg, id, avg, bb, fmvR, bbR, trueFmvR, trueCost,
+      posEV: fmvR >= 1, posBB: bbR >= 1, posTrue: trueFmvR >= 1,
+      best: Math.max(...d.fmvs), worst: Math.min(...d.fmvs),
+      wr: d.fmvs.filter(v => v > cfg.price).length / n,
+      n, hist: d.fmvs.slice(-15), pulls,
+      img: `https://api.courtyard.io/configs/vending-machine/${id}/resources/sealed_pack.png`,
+    };
+  }).sort((a, b) => b.fmvR - a.fmvR);
+}
+
+function buildFeed(assets) {
+  return assets.slice(0, 50).map(a => {
+    const id  = getPackId(a);
+    const cfg = PACK_CFG[id] || { name: 'Unknown Pack', price: 0 };
+    return {
+      user: a.owner?.username || 'anon',
+      pack: cfg.name, packCat: cfg.cat || '',
+      card: a.attributes?.find(x => x.name === 'Title/Subject')?.value || '—',
+      grader: a.attributes?.find(x => x.name === 'Grader')?.value || '',
+      grade:  a.attributes?.find(x => x.name === 'Grade')?.value  || '',
+      fmv:  a.fmv_estimate_usd || 0,
+      price: cfg.price,
+      time: a.tx_time,
+    };
+  });
+}
+
+// ─── FETCH ───────────────────────────────────────────────────────────────────
+let countdown = 300;
+let cdInterval;
+
+async function doLoad() {
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '↺';
+  document.getElementById('live-label').textContent = 'LOADING';
+  document.getElementById('live-dot').classList.remove('pulse');
+  try {
+    const res = await fetch('/api/pulls');
+    if (!res.ok) throw new Error('API status ' + res.status);
+    const data = await res.json();
+    const assets = data.assets || [];
+    if (!assets.length) throw new Error('No assets returned');
+
+    S.packs    = buildPacks(assets);
+    S.feed     = buildFeed(assets);
+    S.rawCount = assets.length;
+
+    // Update header chips
+    document.getElementById('hdr-pos').textContent   = S.packs.filter(p => p.posEV).length;
+    document.getElementById('hdr-bb').textContent    = S.packs.filter(p => p.posBB).length;
+    document.getElementById('hdr-pulls').textContent = assets.length;
+    document.getElementById('live-label').textContent = 'LIVE';
+    document.getElementById('live-dot').classList.add('pulse');
+    countdown = 300;
+    btn.textContent = '↻';
+    render();
+
+  } catch (err) {
+    document.getElementById('live-label').textContent = 'ERROR';
+    btn.textContent = '↻';
+    document.getElementById('content').innerHTML = `
+      <div class="center">
+        <div style="font-size:32px">⚠️</div>
+        <div style="font-weight:700;font-size:15px;color:var(--red)">Could not load live data</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);text-align:center;max-width:400px;line-height:1.8">
+          ${err.message}<br><br>
+          Make sure <strong style="color:var(--text2)">/api/pulls.js</strong> is deployed alongside index.html on Vercel.<br>
+          Drag-drop won't work — use GitHub → Vercel import.
+        </div>
+        <button onclick="doLoad()" style="padding:10px 24px;background:var(--green);border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px">Retry</button>
+      </div>`;
+  }
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  document.getElementById('toolbar').style.display = S.tab === 'packs' ? 'flex' : 'none';
+  if (S.tab === 'packs')  renderPacks();
+  if (S.tab === 'lb')     renderLB();
+  if (S.tab === 'feed')   renderFeed();
+}
+
+// ── PACKS ──
+function renderPacks() {
+  const cats = ['All', ...new Set(S.packs.map(p => p.cat))];
+  document.getElementById('cat-pills').innerHTML = cats.map(c =>
+    `<button class="pill-btn${S.cat === c ? ' on' : ''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+
+  const rows = [...S.packs]
+    .filter(p => S.cat === 'All' || p.cat === S.cat)
+    .filter(p => S.flt === 'pos' ? p.posEV : S.flt === 'neg' ? !p.posEV : true)
+    .sort((a, b) =>
+      S.sort === 'fmv' ? b.fmvR - a.fmvR :
+      S.sort === 'bb'  ? b.bbR  - a.bbR  :
+      S.sort === 'wr'  ? b.wr   - a.wr   :
+      a.price - b.price
+    );
+
+  document.getElementById('content').innerHTML =
+    rows.length === 0
+      ? `<div class="center"><div style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:12px">No packs match this filter</div></div>`
+      : `<div class="grid">${rows.map(packCard).join('')}</div>`;
+}
+
+function packCard(p) {
+  const c    = p.posEV ? 'var(--green)' : 'var(--red)';
+  const cc   = CAT_COLORS[p.cat] || '#888';
+  const sel  = S.sel === p.id;
+  const bb   = p.avg * BB_MULT;
+
+  const expand = sel ? `
+    <div class="detail">
+      <div class="detail-section">
+        <div class="detail-label">💡 Fee Breakdown <span class="unique-tag">NOT ON PULLD</span></div>
+        <div class="fee-row"><span style="color:var(--text2)">Advertised price</span><span style="color:var(--text2)">$25.00</span></div>
+        <div class="fee-row"><span style="color:var(--text2)">Real charged price (+7.4%)</span><span style="color:var(--red)">$26.86</span></div>
+        <div class="fee-row"><span style="color:var(--text2)">Avg card FMV</span><span style="color:${c}">${$f(p.avg)}</span></div>
+        <div class="fee-row"><span style="color:var(--text2)">Courtyard buyback offer (×0.90)</span><span>${$f(p.avg * 0.9)}</span></div>
+        <div class="fee-row total"><span style="color:var(--text)">Cash in hand after 6% fee</span><span style="color:${p.posBB ? 'var(--green)' : 'var(--red)'}; font-size:14px">${$f(bb)}</span></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Top Pulls</div>
+        ${p.pulls.map(r => {
+          const win = r.fmv > p.price;
+          return `<div class="pull-row">
+            <div style="min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${r.card}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px">${[r.grader,r.grade].filter(Boolean).join(' ')} · @${r.user} · ${ago(r.time)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:12px">
+              <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:${win ? 'var(--green)' : 'var(--text3)'}">${$f(r.fmv)}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${win ? 'rgba(0,230,118,.5)' : 'rgba(255,23,68,.4)'}">${win ? '+' : ''}${$f(r.fmv - p.price)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <a href="https://courtyard.io/vending-machine/${p.id}" target="_blank" class="buy-btn" style="background:${p.posEV ? 'var(--green)' : 'var(--bg3)'};color:${p.posEV ? '#000' : 'var(--text3)'};border:${p.posEV ? 'none' : '1px solid var(--border2)'}">
+        ${p.posEV ? '✓ Buy on Courtyard →' : 'View on Courtyard →'}
+      </a>
+    </div>` : '';
+
+  return `
+  <div class="pcard${sel ? ' sel' : ''}" onclick="toggleSel('${p.id}')">
+    <div class="cat-bar" style="background:${cc}"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;padding-left:10px">
+      <div>
+        <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3);letter-spacing:1.5px;margin-bottom:3px;text-transform:uppercase">${p.cat}</div>
+        <div style="font-weight:800;font-size:16px;color:#fff;line-height:1.2;margin-bottom:3px">${p.name}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)">${$f(p.price)}/pack · ${p.n} pulls · ${$p(p.wr)} win rate</div>
+      </div>
+      <span class="ev-badge ${p.posEV ? 'pos' : 'neg'}">${p.posEV ? '+' : '-'}${$p(Math.abs(p.fmvR - 1))}</span>
+    </div>
+
+    <div style="padding-left:10px;margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3)">FMV EV</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${c}">${$p(p.fmvR)}</span>
+      </div>
+      ${evBar(p.fmvR, 'var(--green)', 'var(--red)')}
+
+      <div style="display:flex;justify-content:space-between;margin-top:7px;margin-bottom:3px">
+        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3)">BUYBACK EV <span class="unique-tag">REAL CASH</span></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${p.posBB ? 'var(--blue)' : 'var(--red)'}">${$p(p.bbR)}</span>
+      </div>
+      ${evBar(p.bbR, 'var(--blue)', 'var(--red)')}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-left:10px">
+      <div style="display:flex;gap:16px">
+        <div>
+          <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:2px">AVG FMV</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${c}">${$f(p.avg)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:2px">CASH OUT</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${p.posBB ? 'var(--blue)' : 'var(--red)'}">${$f(bb)}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:2px">BEST PULL</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--green)">${$f(p.best)}</div>
+        </div>
+      </div>
+      ${sparkSVG([...p.hist].reverse(), c, 72, 26)}
+    </div>
+
+    ${expand}
+  </div>`;
+}
+
+// ── LEADERBOARD ──
+function renderLB() {
+  const medals = ['🥇','🥈','🥉'];
+  const sorted = [...S.packs].sort((a, b) => b.fmvR - a.fmvR);
+  document.getElementById('content').innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:2px;margin-bottom:14px;text-transform:uppercase">Pack EV Leaderboard · ${S.rawCount} pulls analyzed</div>
+    ${sorted.map((p, i) => {
+      const c = p.posEV ? 'var(--green)' : 'var(--red)';
+      const cc = CAT_COLORS[p.cat] || '#888';
+      return `<div class="lb-row" style="border-left:3px solid ${cc}">
+        <div style="width:30px;text-align:center;font-size:${i<3?20:13}px;flex-shrink:0;${i>=3?'font-family:\'JetBrains Mono\',monospace;color:var(--text3);font-weight:700':''}">
+          ${i < 3 ? medals[i] : '#' + (i+1)}
+        </div>
+        <img src="${p.img}" style="width:32px;height:44px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--text)">${p.name}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px">
+            ${$f(p.price)}/pack · ${p.n} pulls · ${$p(p.wr)} win rate
+          </div>
+        </div>
+        ${sparkSVG([...p.hist].reverse(), c, 90, 26)}
+        <div style="text-align:right;min-width:110px;flex-shrink:0">
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:900;font-size:22px;color:${c}">${$p(p.fmvR)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)">buyback ${$p(p.bbR)}</div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+// ── LIVE FEED ──
+function renderFeed() {
+  document.getElementById('content').innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite"></span>
+      LIVE PULL FEED · ${S.feed.length} PULLS
+    </div>
+    <div class="feed-wrap">
+    ${S.feed.map(r => {
+      const win = r.fmv > r.price;
+      const hue = ((r.user||'x').charCodeAt(0) * 23) % 360;
+      const grade = [r.grader, r.grade].filter(Boolean).join(' ');
+      return `<div class="feed-row">
+        <div class="avatar" style="background:hsl(${hue},25%,13%);border:1px solid hsl(${hue},25%,20%);color:hsl(${hue},40%,55%)">
+          ${r.user.slice(0,2).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--green2)">@${r.user}</span>
+            <span style="font-size:10px;color:var(--text3);padding:1px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:4px">${r.pack}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-left:auto">${ago(r.time)}</span>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.card}</div>
+          ${grade ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px">${grade}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:15px;color:${win ? 'var(--green)' : 'var(--text3)'}">${$f(r.fmv)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${win ? 'rgba(0,230,118,.5)' : 'rgba(255,23,68,.35)'}">
+            ${win ? '+' : ''}${$f(r.fmv - r.price)}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+function goTab(t) {
+  S.tab = t; S.sel = null;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('nav-' + t).classList.add('on');
+  render();
+}
+function setCat(c)  { S.cat = c; S.sel = null; render(); }
+function setFlt(f)  {
+  S.flt = f;
+  document.querySelectorAll('.flt-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('flt-' + f).classList.add('on');
+  render();
+}
+function setSort(s) {
+  S.sort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('sort-' + s).classList.add('on');
+  render();
+}
+function toggleSel(id) { S.sel = S.sel === id ? null : id; render(); }
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+doLoad();
+setInterval(doLoad, 5 * 60 * 1000); // auto-refresh every 5 min
+
+// Countdown
+cdInterval = setInterval(() => {
+  countdown = Math.max(0, countdown - 1);
+  const el = document.getElementById('cd-txt');
+  if (el) el.textContent = ` · ${countdown}s`;
+  if (countdown === 0) { doLoad(); countdown = 300; }
+}, 1000);
+</script>
+</body>
+</html>
