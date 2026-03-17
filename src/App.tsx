@@ -1,207 +1,226 @@
 import React, { useState } from 'react'
-import { Zap, LayoutGrid, TrendingUp, ShieldCheck, ListFilter, Bell, Menu, X, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import {
+  Zap, LayoutGrid, TrendingUp, ShieldCheck, ListFilter,
+  Brain, Menu, X, ChevronRight, ExternalLink
+} from 'lucide-react'
+import { useCourtyardData } from '@/hooks/use-courtyard-data'
+import { PACKS, type PackData } from '@/data/packs'
+import PackTable from '@/components/PackTable'
 import LiveTicker from '@/components/LiveTicker'
 import StatsBar from '@/components/StatsBar'
-import PackTable from '@/components/PackTable'
 import AIAssistant from '@/components/AIAssistant'
-import { PACKS, RECENT_PULLS } from '@/data/packs'
 
-type NavPage = 'terminal' | 'analytics' | 'buyback' | 'scanner'
-
-const NAV_ITEMS: { id: NavPage; icon: React.ElementType; label: string; badge?: string }[] = [
-  { id: 'terminal', icon: LayoutGrid, label: 'Terminal' },
-  { id: 'analytics', icon: TrendingUp, label: 'Analytics', badge: 'NEW' },
-  { id: 'buyback', icon: ShieldCheck, label: 'Buyback Pulse' },
-  { id: 'scanner', icon: ListFilter, label: 'Alpha Scanner' },
+/* ── Nav items ── */
+const NAV = [
+  { icon: LayoutGrid,  label: 'EV Terminal',     active: true  },
+  { icon: TrendingUp,  label: 'Analytics',        active: false },
+  { icon: ShieldCheck, label: 'Buyback Scanner',  active: false },
+  { icon: ListFilter,  label: 'Alpha Signals',    active: false },
 ]
 
-function Sidebar({ activePage, setActivePage, collapsed, setCollapsed }: {
-  activePage: NavPage
-  setActivePage: (p: NavPage) => void
-  collapsed: boolean
-  setCollapsed: (v: boolean) => void
-}) {
-  return (
-    <aside className={`${collapsed ? 'w-16' : 'w-60'} h-screen flex flex-col border-r border-border/60 bg-[#030c18]/90 backdrop-blur-xl transition-all duration-300 flex-shrink-0 z-30`}>
-      <div className="h-14 flex items-center px-4 border-b border-border/60 justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
-            <Zap className="w-4 h-4 text-primary" />
-          </div>
-          {!collapsed && (
-            <span className="font-black text-lg tracking-tight overflow-hidden whitespace-nowrap">
-              Pulse<span className="text-primary">AI</span>
-            </span>
-          )}
-        </div>
-        <button onClick={() => setCollapsed(!collapsed)} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded">
-          {collapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
-        </button>
-      </div>
+/* ── Category filters ── */
+const CATS = ['All', 'Basketball', 'Pokémon', 'Football', 'Baseball', 'Sports']
 
-      <div className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {!collapsed && (
-          <div className="px-3 pb-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Navigation</span>
-          </div>
+/* ── Sidebar ── */
+function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <>
+      {/* Overlay (mobile) */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="overlay"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+            onClick={onClose}
+          />
         )}
-        {NAV_ITEMS.map(item => (
-          <button key={item.id} onClick={() => setActivePage(item.id)}
-            className={`w-full flex items-center gap-3 h-10 px-3 rounded-lg text-sm font-bold transition-all ${
-              activePage === item.id
-                ? 'bg-primary/15 text-primary border border-primary/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-            }`}>
-            <item.icon className="w-4 h-4 flex-shrink-0" />
-            {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
-            {!collapsed && item.badge && (
-              <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary">{item.badge}</span>
-            )}
+      </AnimatePresence>
+
+      {/* Sidebar body */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-40 lg:z-auto
+        w-64 h-full flex flex-col
+        glass border-r border-border/60
+        transition-transform duration-300 ease-in-out
+        ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Logo */}
+        <div className="h-14 flex items-center justify-between px-5 border-b border-border/60 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-primary fill-primary" />
+            </div>
+            <span className="font-black text-lg tracking-tight italic text-gradient">PulseAI</span>
+          </div>
+          <button onClick={onClose} className="lg:hidden w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
-        ))}
-
-        {!collapsed && (
-          <div className="mt-4 mx-1 p-3 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">Best Value Now</div>
-            <div className="font-bold text-xs text-foreground leading-tight">{PACKS[0].name}</div>
-            <div className="font-mono text-lg font-black text-green-400 mt-0.5">{PACKS[0].evRatio.toFixed(3)}x</div>
-            <div className="text-[9px] text-muted-foreground mt-0.5">${PACKS[0].price.toFixed(2)} per pull</div>
-          </div>
-        )}
-      </div>
-
-      <div className="p-3 border-t border-border/60">
-        {!collapsed ? (
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-teal-600/30 border border-primary/30 flex items-center justify-center flex-shrink-0">
-              <span className="text-[11px] font-black text-primary">KA</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold truncate">Alpha Collector</div>
-              <div className="text-[9px] text-primary font-medium">Pro Member</div>
-            </div>
-            <Bell className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-pointer" />
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-teal-600/30 border border-primary/30 flex items-center justify-center">
-              <span className="text-[11px] font-black text-primary">KA</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </aside>
-  )
-}
-
-function RecentPullsGrid() {
-  return (
-    <div className="rounded-xl border border-border/60 overflow-hidden bg-card/30 backdrop-blur-sm">
-      <div className="px-5 py-3.5 border-b border-border/60 bg-[#060f1f]/60 flex items-center justify-between">
-        <h2 className="font-black text-sm uppercase tracking-widest">Recent Big Pulls</h2>
-        <span className="text-[10px] text-muted-foreground">From active members</span>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-0">
-        {RECENT_PULLS.slice(0, 8).map((pull, i) => (
-          <motion.div key={pull.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-            className="border-r border-b border-border/40 p-4 group hover:bg-primary/5 transition-colors cursor-pointer">
-            <div className="aspect-[3/4] rounded-lg overflow-hidden bg-secondary/30 mb-3 border border-border/40 group-hover:border-primary/30 transition-colors">
-              <img src={pull.imageUrl} alt={pull.cardName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  const el = e.target as HTMLImageElement
-                  el.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground px-2 text-center">${pull.cardName}</div>`
-                }} />
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs font-bold leading-tight truncate">{pull.cardName}</div>
-              <div className="text-green-400 font-mono font-black text-sm">${pull.value.toLocaleString()}</div>
-              <div className="text-[10px] text-muted-foreground">from a <span className="text-foreground/60">${pull.packPrice}</span> pack</div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="flex-1 flex items-center justify-center p-20">
-      <div className="text-center space-y-3">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
-          <Zap className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-xl font-black">{label}</h2>
-        <p className="text-muted-foreground text-sm">Coming soon — building the alpha engine.</p>
-      </div>
-    </div>
+
+        {/* Nav */}
+        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground px-3 pb-2 pt-1">Workspace</p>
+          {NAV.map((item) => (
+            <button key={item.label}
+              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-all group ${
+                item.active
+                  ? 'bg-primary/10 text-primary border border-primary/20'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </div>
+              {item.active && <ChevronRight className="w-3 h-3 opacity-60" />}
+            </button>
+          ))}
+
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground px-3 pb-2 pt-5">Markets</p>
+          {CATS.filter(c => c !== 'All').map(cat => {
+            const EMOJI: Record<string, string> = { Basketball: '🏀', Pokémon: '⚡', Football: '🏈', Baseball: '⚾', Sports: '🏆' }
+            const count = PACKS.filter(p => p.category === cat).length
+            return (
+              <button key={cat}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all font-medium"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span>{EMOJI[cat]}</span>
+                  <span>{cat}</span>
+                </div>
+                <span className="text-[10px] font-mono bg-muted/60 px-1.5 py-0.5 rounded">{count}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border/60 flex-shrink-0">
+          <div className="flex items-center gap-3 bg-muted/30 rounded-xl p-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-black text-primary">EV</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold truncate">Alpha Collector</p>
+              <p className="text-[10px] text-muted-foreground font-mono">Pro Member</p>
+            </div>
+          </div>
+          <a href="https://courtyard.io" target="_blank" rel="noreferrer"
+            className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+            <ExternalLink className="w-3 h-3" /> Open Courtyard.io
+          </a>
+        </div>
+      </aside>
+    </>
   )
 }
 
+/* ── Main App ── */
 export default function App() {
-  const [activePage, setActivePage] = useState<NavPage>('terminal')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [showAI, setShowAI] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { packs: rawPacks, livePulls } = useCourtyardData()
+  // Cast to PackData[] — both types share the same shape
+  const packs = rawPacks as unknown as PackData[]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#020810] text-foreground">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+    <div className="flex h-screen overflow-hidden bg-[hsl(222,47%,3%)]">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Right panel */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 border-b border-border/60 bg-[#030c18]/80 backdrop-blur-md flex items-center px-5 gap-4 flex-shrink-0">
-          <div className="flex-1 flex items-center gap-3">
-            <h1 className="font-black text-base uppercase tracking-wide flex items-center gap-2">
-              Alpha Terminal
-              <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border text-[9px] font-black uppercase tracking-widest animate-pulse">LIVE</Badge>
-            </h1>
-            <span className="text-[11px] text-muted-foreground hidden md:block">Real-time EV tracking for Courtyard.io mystery packs</span>
+
+        {/* Top header */}
+        <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-border/60 bg-card/30 backdrop-blur-xl flex-shrink-0 z-20">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <Menu className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm tracking-tight uppercase italic hidden lg:block">EV Terminal</span>
+              <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-full px-2.5 py-1">
+                <span className="live-dot" />
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Live</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5">
-            <a href="https://courtyard.io/vending-machine/mystery-pack-machine" target="_blank" rel="noopener noreferrer"
-              className="hidden md:flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors">
-              Open Courtyard <ExternalLink className="w-3 h-3" />
-            </a>
-            <Button variant="outline" size="sm"
-              className={`h-8 text-[11px] font-black gap-1.5 ${showAI ? 'border-primary/40 text-primary bg-primary/10' : 'border-border/60 text-muted-foreground'}`}
-              onClick={() => setShowAI(v => !v)}>
-              <Zap className="w-3 h-3" /> AI Strategy
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-4 text-[11px] font-mono text-muted-foreground">
+              <span><span className="text-primary font-black">{packs.filter(p => p.evRatio >= 1).length}</span> +EV packs</span>
+              <span><span className="text-foreground font-bold">{packs.reduce((s, p) => s + p.totalPulls, 0).toLocaleString()}</span> pulls</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <Brain className="w-4 h-4 text-primary" />
+            </div>
           </div>
         </header>
 
+        {/* Live ticker */}
         <LiveTicker />
 
+        {/* Scrollable main content */}
         <div className="flex-1 flex overflow-hidden">
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
-            <AnimatePresence mode="wait">
-              {activePage === 'terminal' && (
-                <motion.div key="terminal" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="p-5 space-y-6">
-                  <StatsBar />
-                  <PackTable packs={PACKS} />
-                  <RecentPullsGrid />
-                </motion.div>
-              )}
-              {activePage !== 'terminal' && (
-                <motion.div key={activePage} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex">
-                  <ComingSoon label={activePage === 'analytics' ? 'Analytics Dashboard' : activePage === 'buyback' ? 'Buyback Pulse' : 'Alpha Scanner'} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-4 lg:p-6 space-y-5 max-w-[1400px] mx-auto">
+
+              {/* Page heading */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-black tracking-tight italic text-gradient leading-none">
+                    Alpha Terminal
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1 font-medium">
+                    Real-time Expected Value tracking for <span className="text-foreground font-bold">Courtyard.io</span> mystery packs
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="glass rounded-lg px-3 py-2 text-center">
+                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Market Avg EV</p>
+                    <p className="font-black text-base font-mono text-primary leading-tight">
+                      {(packs.reduce((s, p) => s + p.evRatio, 0) / packs.length).toFixed(3)}x
+                    </p>
+                  </div>
+                  <div className="glass rounded-lg px-3 py-2 text-center">
+                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Total Tracked</p>
+                    <p className="font-black text-base font-mono leading-tight">
+                      {packs.reduce((s, p) => s + p.totalPulls, 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats bar */}
+              <StatsBar />
+
+              {/* Main EV table */}
+              <div className="glass overflow-hidden">
+                <div className="px-4 py-3 border-b border-border/50 bg-card/40 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4 text-primary" />
+                    <span className="font-black text-sm tracking-tight uppercase italic">Pack Scanner</span>
+                    <span className="text-[10px] font-mono text-muted-foreground ml-2 hidden sm:block">
+                      {packs.length} packs · auto-refreshes every 8s
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="live-dot" />
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Live Data</span>
+                  </div>
+                </div>
+                <PackTable packs={packs} />
+              </div>
+
+            </div>
           </main>
 
-          <AnimatePresence>
-            {showAI && (
-              <motion.aside initial={{ width: 0, opacity: 0 }} animate={{ width: 320, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                className="border-l border-border/60 flex-shrink-0 overflow-hidden">
-                <div className="w-80 h-full p-3">
-                  <AIAssistant />
-                </div>
-              </motion.aside>
-            )}
-          </AnimatePresence>
+          {/* AI Sidebar (desktop only) */}
+          <aside className="hidden xl:flex flex-col w-[320px] border-l border-border/60 flex-shrink-0">
+            <AIAssistant packs={packs} />
+          </aside>
         </div>
       </div>
     </div>
