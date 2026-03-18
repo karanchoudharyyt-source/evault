@@ -210,8 +210,7 @@ function RecentPullsGrid({ pulls }: { pulls: ReturnType<typeof useCourtyardData>
 /* ─────────────────────────── App ─────────────────────────── */
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { packs, livePulls, totalPulls, posEV, avgEV, bestPack, tick } = useCourtyardData()
-
+const { packs, livePulls, totalPulls, posEV, avgEV, bestPack, lastUpdated } = useCourtyardData()
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'hsl(218,44%,3.5%)' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} packs={packs} />
