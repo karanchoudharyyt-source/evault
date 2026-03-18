@@ -7,7 +7,7 @@ interface Props {
   totalPulls: number
   posEV: number
   avgEV: number
-  bestPack: Pack
+  bestPack: Pack | null
 }
 
 export default function StatsBar({ packs, totalPulls, posEV, avgEV, bestPack }: Props) {
@@ -22,38 +22,46 @@ export default function StatsBar({ packs, totalPulls, posEV, avgEV, bestPack }: 
     {
       icon: TrendingUp,
       label: 'Best EV Right Now',
-      value: `${bestPack.evRatio.toFixed(3)}x`,
-      sub: bestPack.name,
+      value: bestPack ? `${bestPack.evRatio.toFixed(3)}x` : '—',
+      sub: bestPack ? bestPack.name : 'No pack data',
       color: 'ev-great',
     },
     {
       icon: Package,
       label: 'Pulls Tracked',
       value: totalPulls.toLocaleString(),
-      sub: 'and counting',
+      sub: 'tracked sample volume',
       color: 'text-blue-400',
     },
     {
       icon: BarChart3,
       label: 'Market Avg EV',
       value: `${avgEV.toFixed(3)}x`,
-      sub: avgEV >= 1.2 ? 'Market is HOT 🔥' : avgEV >= 1.0 ? 'Market is healthy' : 'Market is cool',
+      sub: avgEV >= 1.2 ? 'Market is strong' : avgEV >= 1.0 ? 'Market is healthy' : 'Market is soft',
       color: avgEV >= 1.0 ? 'ev-positive' : 'ev-neutral',
     },
   ]
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map((s, i) => (
-        <div key={i} className="glass rounded-xl p-4 flex items-start gap-3 hover:border-primary/25 transition-all animate-in"
-          style={{ animationDelay: `${i * 0.07}s` }}>
+      {stats.map((stat, i) => (
+        <div
+          key={stat.label}
+          className="glass rounded-xl p-4 flex items-start gap-3 hover:border-primary/25 transition-all animate-in"
+          style={{ animationDelay: `${i * 0.07}s` }}
+        >
           <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 flex items-center justify-center flex-shrink-0">
-            <s.icon className="w-4 h-4 text-primary" />
+            <stat.icon className="w-4 h-4 text-primary" />
           </div>
+
           <div className="min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-0.5">{s.label}</p>
-            <p className={`font-black text-xl font-mono tabular tracking-tight leading-none ${s.color}`}>{s.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-1 truncate">{s.sub}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-0.5">
+              {stat.label}
+            </p>
+            <p className={`font-black text-xl font-mono tabular tracking-tight leading-none ${stat.color}`}>
+              {stat.value}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1 truncate">{stat.sub}</p>
           </div>
         </div>
       ))}
