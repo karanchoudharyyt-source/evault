@@ -255,11 +255,12 @@ const { packs, livePulls, totalPulls, posEV, avgEV, bestPack, lastUpdated } = us
             <div className="flex items-center gap-1">
               <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/50 hover:border-primary/30 transition-colors cursor-pointer">
                 <Bell className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
-              </div>
-              <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
-                title={`Last refresh: tick ${tick}`}>
-                <RefreshCw className={`w-4 h-4 text-muted-foreground ${tick > 0 ? 'text-primary' : ''}`} />
-              </div>
+             <div
+  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/50 transition-colors"
+  title={lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No update time available'}
+>
+  <RefreshCw className="w-4 h-4 text-muted-foreground" />
+</div>
             </div>
           </div>
         </header>
