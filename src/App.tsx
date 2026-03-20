@@ -181,7 +181,7 @@ body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',syst
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({msg,type,onClose}:{msg:string;type:"ok"|"warn"|"err";onClose:()=>void}){
-  useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
+  useEffect(()=>{const t=setTimeout(onClose,2500);return()=>clearTimeout(t);},[onClose]);
   const colors={ok:"#00ff87",warn:"#ffd166",err:"#ff3860"};
   const icons={ok:"✅",warn:"⚠️",err:"❌"};
   return(
@@ -363,22 +363,62 @@ function Dashboard(){
 
   const addToast=(msg:string,type:"ok"|"warn"|"err"="ok")=>{
     const id=++toastId.current;
-    // Cap at 3 toasts max — clear oldest if exceeded
-    setToasts(t=>{const next=[...t.slice(-2),{id,msg,type}];return next;});
+    const key=msg.slice(0,30); // dedup key
+    setToasts(t=>{
+      // Replace existing toast with same message, or keep max 2
+      const without=t.filter(x=>x.msg.slice(0,30)!==key);
+      return [...without.slice(-1),{id,msg,type}];
+    });
   };
   const removeToast=(id:number)=>setToasts(t=>t.filter(x=>x.id!==id));
 
-  // Register service worker
+  // Register service worker + force re-subscribe if VAPID key changed
   useEffect(()=>{
     if(swRegistered.current) return;
     swRegistered.current=true;
     if(!("serviceWorker" in navigator)||!("PushManager" in window)){setSwStatus("unsupported");return;}
-    navigator.serviceWorker.register("/sw.js").then(reg=>{
+    navigator.serviceWorker.register("/sw.js").then(async reg=>{
       const p=Notification.permission;
       setSwStatus(p==="granted"?"granted":p==="denied"?"denied":"unknown");
-      reg.pushManager.getSubscription().then(sub=>{
-        if(sub){setPushSub(sub);setIsSubscribed(true);}
-      });
+      if(p!=="granted") return;
+
+      const existingSub=await reg.pushManager.getSubscription();
+      if(existingSub){
+        // Check if this subscription was created with the current VAPID key
+        // by comparing the applicationServerKey stored in the subscription
+        const subKey=existingSub.options?.applicationServerKey;
+        const currentKey=urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        
+        let keyMatch=false;
+        if(subKey){
+          const subKeyBytes=new Uint8Array(subKey as ArrayBuffer);
+          keyMatch=subKeyBytes.length===currentKey.length&&subKeyBytes.every((b,i)=>b===currentKey[i]);
+        }
+
+        if(keyMatch){
+          // Key matches — use existing subscription
+          setPushSub(existingSub);
+          setIsSubscribed(true);
+        } else {
+          // Key mismatch — old subscription, unsubscribe and re-subscribe with new key
+          console.log("VAPID key changed — re-subscribing");
+          await existingSub.unsubscribe();
+          try{
+            const newSub=await reg.pushManager.subscribe({
+              userVisibleOnly:true,
+              applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
+            setPushSub(newSub);
+            setIsSubscribed(true);
+            // Save new subscription silently
+            const p256dh=btoa(String.fromCharCode(...new Uint8Array(newSub.getKey("p256dh")!)));
+            const auth=btoa(String.fromCharCode(...new Uint8Array(newSub.getKey("auth")!)));
+            fetch("/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({subscription:{endpoint:newSub.endpoint,keys:{p256dh,auth}},packIds:[],alertOnEv:true,alertOnBuyback:true,evThreshold:1.0,alertType:"all"})
+            }).catch(()=>{});
+          }catch(e){console.error("Re-subscribe failed:",e);}
+        }
+      }
     }).catch(()=>{});
   },[]);
 
@@ -442,7 +482,12 @@ function Dashboard(){
   },[]);
 
   // Bell on card — toggle this specific pack alert
+  const toggleDebounce=useRef<Record<string,number>>({});
   const toggleAlert=useCallback(async(packId:string)=>{
+    // Debounce: ignore clicks within 800ms of last click on same pack
+    const now=Date.now();
+    if(toggleDebounce.current[packId]&&now-toggleDebounce.current[packId]<800) return;
+    toggleDebounce.current[packId]=now;
     if(swStatus!=="granted"||!pushSub){
       // Not set up — open panel so user can enable
       setAlertsOpen(true);
