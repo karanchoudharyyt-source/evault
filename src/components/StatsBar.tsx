@@ -1,70 +1,67 @@
-import React from 'react'
-import { TrendingUp, Package, Zap, BarChart3 } from 'lucide-react'
-import type { Pack } from '@/data/packs'
+import { Pack } from "../data/packs";
 
-interface Props {
-  packs: Pack[]
-  totalPulls: number
-  posEV: number
-  avgEV: number
-  bestPack: Pack | null
+interface StatsBarProps {
+  totalPulls: number;
+  posEV: number;
+  avgEV: number;
+  bestPack: Pack | null;
+  lastUpdated: string;
 }
 
-export default function StatsBar({ packs, totalPulls, posEV, avgEV, bestPack }: Props) {
-  const stats = [
-    {
-      icon: Zap,
-      label: '+EV Packs',
-      value: `${posEV}/${packs.length}`,
-      sub: 'above break-even EV',
-      color: 'ev-positive',
-    },
-    {
-      icon: TrendingUp,
-      label: 'Best EV Right Now',
-      value: bestPack ? `${bestPack.evRatio.toFixed(3)}x` : '—',
-      sub: bestPack ? bestPack.name : 'No pack data',
-      color: 'ev-great',
-    },
-    {
-      icon: Package,
-      label: 'Pulls Tracked',
-      value: totalPulls.toLocaleString(),
-      sub: 'tracked sample volume',
-      color: 'text-blue-400',
-    },
-    {
-      icon: BarChart3,
-      label: 'Market Avg EV',
-      value: `${avgEV.toFixed(3)}x`,
-      sub: avgEV >= 1.2 ? 'Market is strong' : avgEV >= 1.0 ? 'Market is healthy' : 'Market is soft',
-      color: avgEV >= 1.0 ? 'ev-positive' : 'ev-neutral',
-    },
-  ]
+function formatTime(isoString: string): string {
+  try {
+    return new Date(isoString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
 
+export function StatsBar({
+  totalPulls,
+  posEV,
+  avgEV,
+  bestPack,
+  lastUpdated,
+}: StatsBarProps) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map((stat, i) => (
-        <div
-          key={stat.label}
-          className="glass rounded-xl p-4 flex items-start gap-3 hover:border-primary/25 transition-all animate-in"
-          style={{ animationDelay: `${i * 0.07}s` }}
-        >
-          <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 flex items-center justify-center flex-shrink-0">
-            <stat.icon className="w-4 h-4 text-primary" />
-          </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
+      <div className="bg-card px-6 py-4">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase mb-1">
+          Sample Pulls
+        </p>
+        <p className="text-2xl font-bold text-foreground">{totalPulls}</p>
+      </div>
 
-          <div className="min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-0.5">
-              {stat.label}
-            </p>
-            <p className={`font-black text-xl font-mono tabular tracking-tight leading-none ${stat.color}`}>
-              {stat.value}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1 truncate">{stat.sub}</p>
-          </div>
-        </div>
-      ))}
+      <div className="bg-card px-6 py-4">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase mb-1">
+          +EV Packs
+        </p>
+        <p className="text-2xl font-bold text-green-400">{posEV}</p>
+      </div>
+
+      <div className="bg-card px-6 py-4">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase mb-1">
+          Avg EV
+        </p>
+        <p className="text-2xl font-bold text-foreground">
+          {(avgEV * 100).toFixed(1)}%
+        </p>
+      </div>
+
+      <div className="bg-card px-6 py-4">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase mb-1">
+          Top Pack
+        </p>
+        <p className="text-lg font-bold text-foreground truncate">
+          {bestPack ? bestPack.name : "—"}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Updated {formatTime(lastUpdated)}
+        </p>
+      </div>
     </div>
-  )
+  );
 }
