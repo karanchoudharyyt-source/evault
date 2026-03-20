@@ -94,7 +94,7 @@ function Dashboard() {
           </span>
           {data && (
             <span className="text-[9px] text-muted-foreground/50 font-mono">
-              · sample data
+              · {data.isLive ? 'live data' : 'sample data'}
             </span>
           )}
         </div>
@@ -295,7 +295,7 @@ function Dashboard() {
       {/* Disclaimer */}
       <div className="px-4 py-2 border-t border-border bg-card text-center">
         <p className="text-[9px] text-muted-foreground">
-          Sample data for demonstration. Not financial advice. Pack outcomes are random.
+          EV calculated from real Courtyard.io pulls. Not financial advice. Pack outcomes are random.
           EV is based on sample pull history — actual results will vary.
         </p>
       </div>
