@@ -209,9 +209,7 @@ function AlertPanel({
 
   return(
     <>
-      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:99,opacity:open?1:0,pointerEvents:open?"all":"none",transition:"opacity .2s"}}/>
-      <div style={{position:"fixed",top:0,right:0,bottom:0,width:320,background:"#07101f",borderLeft:"1px solid #122038",zIndex:100,display:"flex",flexDirection:"column",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .25s cubic-bezier(.4,0,.2,1)"}}>
-
+      <div style={{position:"fixed",top:80,right:0,bottom:0,width:360,background:"#07101f",borderLeft:"1px solid #122038",zIndex:100,display:"flex",flexDirection:"column",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .25s cubic-bezier(.4,0,.2,1)",boxShadow:open?"-4px 0 20px rgba(0,0,0,.4)":"none"}}>
         {/* Header */}
         <div style={{padding:"13px 16px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <div style={{flex:1}}>
@@ -334,7 +332,6 @@ function AlertPanel({
           <span style={{fontSize:8,color:"#2a4060",...M}}>Free forever · No account needed · 1-click to disable</span>
         </div>
       </div>
-    </>
   );
 }
 
@@ -498,7 +495,7 @@ function Dashboard(){
     next.has(packId)?next.delete(packId):next.add(packId);
     setAlerts(next);
     const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
-    addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert OFF for ${packName}`,"ok");
+    // Bell toggle is silent — no toast popup covering cards
     await saveSubscription(pushSub,Array.from(next),'all');
   },[alerts,swStatus,pushSub,data,saveSubscription]);
 
@@ -575,9 +572,6 @@ function Dashboard(){
             <div className="hstat-v" style={{color:s.c}}>{s.v}</div>
           </div>
         ))}
-        <button onClick={()=>setAlertsOpen(true)} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5,padding:"4px 12px",background:isSubscribed?"rgba(255,209,102,.06)":"transparent",border:`1px solid ${isSubscribed?"rgba(255,209,102,.3)":"#122038"}`,borderRadius:7,cursor:"pointer",fontSize:9,color:isSubscribed?"#ffd166":"#3a5068",fontWeight:700,...M,flexShrink:0}}>
-          {isSubscribed?"🔔 Alerts Active":"🔔 Set Alerts"}
-        </button>
         <button onClick={()=>refetch()} disabled={isLoading} style={{marginLeft:"auto",padding:"4px 11px",background:"transparent",border:"1px solid #122038",borderRadius:5,fontSize:8,color:"#3a5068",cursor:"pointer",...M}}>↻ Refresh</button>
       </nav>
 
@@ -588,17 +582,24 @@ function Dashboard(){
         <aside style={{width:178,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"9px 10px 3px",fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>WORKSPACE</div>
           {([
-            ["packs","⚡","EV Terminal",""],
-            ["budget","💰","Budget Advisor",""],
-            ["feed","📋","Pull Feed",""],
-            ["alerts","🔔","EV Alerts", isSubscribed?"LIVE":swStatus==="granted"?"ON":""]  /* panel */,
-          ] as [string,string,string,string][]).map(([v,ico,lbl,badge])=>(
+            ["packs","⚡","EV Terminal"],
+            ["budget","💰","Budget Advisor"],
+            ["feed","📋","Pull Feed"],
+          ] as [string,string,string][]).map(([v,ico,lbl])=>(
             <button key={v} className={`sb-btn${view===v?" on":""}`} onClick={()=>setView(v as any)}
-              style={{borderLeftColor:view===v?v==="alerts"?"#ffd166":"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent"}}>
+              style={{borderLeftColor:view===v?"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent"}}>
               {ico} {lbl}
-              {badge&&<span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:v==="alerts"?"#ffd166":"#00ff87",background:v==="alerts"?"rgba(255,209,102,.1)":"rgba(0,255,135,.08)",padding:"1px 4px",borderRadius:3,...M}}>{badge}</span>}
             </button>
           ))}
+          {/* Alerts — opens side panel */}
+          <button className={`sb-btn${alertsOpen?" on":""}`} onClick={()=>setAlertsOpen(true)}
+            style={{borderLeftColor:alertsOpen?"#ffd166":"transparent",background:alertsOpen?"rgba(255,255,255,.025)":"transparent"}}>
+            🔔 EV Alerts
+            {isSubscribed
+              ? <span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.08)",padding:"1px 5px",borderRadius:3,...M}}>LIVE</span>
+              : <span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:"#ffd166",background:"rgba(255,209,102,.08)",padding:"1px 5px",borderRadius:3,...M}}>SET UP</span>
+            }
+          </button>
 
           <div style={{padding:"9px 10px 3px",marginTop:4,fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>MARKETS</div>
           {cats.map(c=>{
