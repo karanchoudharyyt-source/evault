@@ -196,206 +196,121 @@ function Toast({msg,type,onClose}:{msg:string;type:"ok"|"warn"|"err";onClose:()=
 }
 
 // ─── ALERTS PAGE ─────────────────────────────────────────────────────────────
-// ─── Alert Panel (slide-in from right) ──────────────────────────────────────
+// ─── Alert Panel ─────────────────────────────────────────────────────────────
+// Simple: enable once → get all alerts. Bell = toggle specific pack.
 function AlertPanel({
-  open, onClose, packs, alerts, onToggle,
-  swStatus, onEnableNotifs, alertType, setAlertType, isSubscribed
+  open, onClose, packs, alerts, onToggle, swStatus, onEnableNotifs, isSubscribed
 }:{
   open:boolean; onClose:()=>void; packs:Pack[]; alerts:Set<string>;
-  onToggle:(id:string)=>void; swStatus:string; onEnableNotifs:()=>Promise<boolean>;
-  alertType:string; setAlertType:(t:string)=>void; isSubscribed:boolean;
+  onToggle:(id:string)=>void; swStatus:string;
+  onEnableNotifs:()=>Promise<boolean>; isSubscribed:boolean;
 }){
   const M={fontFamily:"monospace"} as React.CSSProperties;
-  const [enabling,setEnabling]=useState(false);
-  const [step,setStep]=useState<"type"|"packs">("type");
-
-  const handleEnable=async()=>{
-    // Don't call setEnabling(true) here — it triggers a React re-render
-    // which breaks the browser gesture chain and prevents the popup from firing
-    const ok=await onEnableNotifs();
-    setEnabling(!ok); // only update state AFTER permission request completes
-    if(ok) setStep("type");
-  };
-
-  const TYPES=[
-    {id:"smart", icon:"🔥", label:"Smart Alerts", color:"#00ff87",
-     desc:"Only when buyback EV hits 1.2x+ — actual profit after ALL fees. Rare & valuable.",
-     example:"🔥 Basketball Pro STRONG BUY — 1.38x buyback · $69 cash",
-     badge:"RECOMMENDED", nopack:true},
-    {id:"market", icon:"📊", label:"Market Alerts", color:"#4f8fff",
-     desc:"Any pack goes +EV. Good for casual users — we watch everything.",
-     example:"📊 4 packs are +EV now! Best: Basketball Pro 1.47x",
-     badge:"NO SETUP", nopack:true},
-    {id:"pack", icon:"🔔", label:"Pack Alerts", color:"#ffd166",
-     desc:"Pick specific packs. Get notified when YOUR packs cross 1.0x EV.",
-     example:"⚡ Pokémon Starter is +EV! EV: 1.21x · Cash: $25.50",
-     badge:"CUSTOM", nopack:false},
-    {id:"all", icon:"⚡", label:"All Alerts", color:"#c8dff0",
-     desc:"Smart + Market + Pack alerts combined. Maximum coverage.",
-     example:"All of the above",
-     badge:"MAX", nopack:false},
-  ];
-
-  const selected=TYPES.find(t=>t.id===alertType)||TYPES[0];
-  const showPackStep=(alertType==="pack"||alertType==="all")&&step==="packs";
 
   return(
     <>
-      {/* Overlay */}
-      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:99,opacity:open?1:0,pointerEvents:open?"all":"none",transition:"opacity .2s"}}/>
-
-      {/* Panel */}
-      <div style={{position:"fixed",top:0,right:0,bottom:0,width:340,background:"#07101f",borderLeft:"1px solid #122038",zIndex:100,display:"flex",flexDirection:"column",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .25s cubic-bezier(.4,0,.2,1)"}}>
+      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:99,opacity:open?1:0,pointerEvents:open?"all":"none",transition:"opacity .2s"}}/>
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:320,background:"#07101f",borderLeft:"1px solid #122038",zIndex:100,display:"flex",flexDirection:"column",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .25s cubic-bezier(.4,0,.2,1)"}}>
 
         {/* Header */}
         <div style={{padding:"13px 16px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>🔔 EV Alerts</div>
             <div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>
-              {isSubscribed?`Active · ${selected.label}`:"Set up alerts — free, no account needed"}
+              {isSubscribed?"Active — watching Courtyard every 60s":"Get notified when packs go +EV"}
             </div>
           </div>
-          {showPackStep&&<button onClick={()=>setStep("type")} style={{all:"unset" as any,cursor:"pointer",fontSize:9,color:"#3a5068",padding:"3px 8px",border:"1px solid #122038",borderRadius:5,...M}}>← Back</button>}
           <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",width:22,height:22,border:"1px solid #122038",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>✕</button>
         </div>
 
-        {/* Notification status */}
-        {swStatus==="denied"&&(
-          <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-            <div style={{background:"rgba(255,56,96,.06)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 11px"}}>
-              <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked by Browser</div>
-              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>
-                Click the 🔒 lock in your address bar → <strong style={{color:"#c8dff0"}}>Notifications</strong> → <strong style={{color:"#00ff87"}}>Allow</strong> → refresh the page.
+        {/* Status / Enable */}
+        <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
+          {swStatus==="granted"&&isSubscribed?(
+            <div style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.18)",borderRadius:8,padding:"9px 12px",display:"flex",alignItems:"center",gap:9}}>
+              <span className="ld" style={{width:6,height:6}}/>
+              <div>
+                <div style={{fontWeight:700,fontSize:11,color:"#00ff87"}}>Notifications Active</div>
+                <div style={{fontSize:9,color:"#3a5068",marginTop:1}}>Server checks Courtyard every 60s · alerts fire even when browser is closed</div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Active status */}
-        {swStatus==="granted"&&isSubscribed&&!showPackStep&&(
-          <div style={{padding:"8px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-            <div style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.15)",borderRadius:7,padding:"7px 10px",display:"flex",alignItems:"center",gap:8}}>
-              <span className="ld" style={{width:5,height:5}}/>
-              <span style={{fontSize:10,color:"#00ff87",fontWeight:700}}>Alerts Active</span>
-              <span style={{fontSize:9,color:"#3a5068",...M}}>Server checks every 60s · works when browser closed</span>
+          ):swStatus==="denied"?(
+            <div style={{background:"rgba(255,56,96,.05)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 12px"}}>
+              <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked</div>
+              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>
+                Click the <strong style={{color:"#c8dff0"}}>🔒 lock</strong> in your address bar → Notifications → <strong style={{color:"#00ff87"}}>Allow</strong> → refresh the page.
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Not yet enabled hint */}
-        {swStatus!=="granted"&&swStatus!=="denied"&&!showPackStep&&(
-          <div style={{padding:"8px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-            <div style={{background:"rgba(255,209,102,.04)",border:"1px solid rgba(255,209,102,.18)",borderRadius:7,padding:"7px 10px",fontSize:9,color:"#ffd166",lineHeight:1.5}}>
-              👇 <strong>Pick an alert type below</strong> — browser will ask you to Allow notifications. Click Allow and you're done.
-            </div>
-          </div>
-        )}
-
-        {/* STEP: Type selector */}
-        {!showPackStep&&(
-          <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>CHOOSE YOUR ALERT TYPE</div>
-
-            {TYPES.map(t=>{
-              const active=alertType===t.id;
-              return(
-                <div key={t.id} onClick={()=>setAlertType(t.id)}
-                  style={{border:`1px solid ${active?t.color+"55":"#122038"}`,borderRadius:9,padding:"11px 12px",cursor:"pointer",background:active?`${t.color}08`:"#0b1728",transition:"all .15s"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:6}}>
-                    <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:800,fontSize:12,color:active?t.color:"#fff"}}>{t.label}</div>
-                    </div>
-                    <span style={{fontSize:7,fontWeight:800,color:t.color,background:`${t.color}15`,padding:"2px 6px",borderRadius:3,border:`1px solid ${t.color}33`,...M}}>{t.badge}</span>
-                    <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${active?t.color:"#3a5068"}`,background:active?t.color:"transparent",flexShrink:0}}/>
-                  </div>
-                  <div style={{fontSize:10,color:"#3a5068",lineHeight:1.4,marginBottom:active?6:0}}>{t.desc}</div>
-                  {active&&(
-                    <div style={{fontSize:9,color:t.color,opacity:.7,fontStyle:"italic",borderTop:`1px solid ${t.color}22`,paddingTop:5,lineHeight:1.4,...M}}>
-                      e.g. "{t.example}"
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Pack selection shortcut */}
-            {(alertType==="pack"||alertType==="all")&&(
-              <button onClick={()=>setStep("packs")}
-                style={{all:"unset" as any,cursor:"pointer",marginTop:4,padding:"10px 12px",background:"#0b1728",border:"1px solid rgba(255,209,102,.25)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:11,color:"#ffd166"}}>Select Packs to Watch</div>
-                  <div style={{fontSize:9,color:"#3a5068",marginTop:2}}>
-                    {alerts.size>0?`${alerts.size} pack${alerts.size!==1?"s":""} selected`:"No packs selected yet — tap to choose"}
-                  </div>
-                </div>
-                <span style={{color:"#ffd166",fontSize:14}}>→</span>
+          ):(
+            <div style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.2)",borderRadius:8,padding:"10px 12px"}}>
+              <div style={{fontWeight:700,fontSize:12,color:"#00ff87",marginBottom:5}}>⚡ Enable Push Notifications</div>
+              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5,marginBottom:8}}>
+                One click → browser asks to <strong style={{color:"#fff"}}>Allow</strong> → you're done. Get all alerts below automatically. Works even when this tab is closed.
+              </div>
+              <button onClick={onEnableNotifs}
+                style={{width:"100%",padding:"10px",background:"#00ff87",color:"#000",border:"none",borderRadius:7,fontWeight:800,fontSize:12,cursor:"pointer",...M}}>
+                Enable Notifications →
               </button>
-            )}
+            </div>
+          )}
+        </div>
 
-            {/* How it works */}
-            <div style={{marginTop:6,padding:"10px 12px",background:"#060d18",border:"1px solid #122038",borderRadius:8}}>
-              <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:7}}>HOW IT WORKS</div>
-              {[
-                ["🌐","Enable once","Browser saves your subscription to our server"],
-                ["⏱️","Every 60s","Server fetches live Courtyard data automatically"],
-                ["📐","EV calculated","Checks every pack against your alert settings"],
-                ["📲","You get notified","Push to your phone/laptop even if browser is closed"],
-              ].map(([ico,t,s])=>(
-                <div key={t} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
-                  <span style={{fontSize:12,flexShrink:0}}>{ico}</span>
-                  <div>
-                    <span style={{fontSize:10,fontWeight:700,color:"#c8dff0"}}>{t} — </span>
-                    <span style={{fontSize:9,color:"#3a5068"}}>{s}</span>
+        {/* What alerts you get */}
+        <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
+          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:7}}>WHAT YOU'LL GET AUTOMATICALLY</div>
+          <div style={{display:"flex",flexDirection:"column" as const,gap:5}}>
+            {[
+              {icon:"🔥",title:"Strong Buy Alert",c:"#00ff87",desc:"When any pack hits 1.2x+ buyback EV — profit after ALL fees. Rare, always worth acting on."},
+              {icon:"📊",title:"Market Alert",c:"#4f8fff",desc:"When the market turns positive — summary of the best +EV packs right now."},
+              {icon:"⚡",title:"Pack EV Alert",c:"#ffd166",desc:"When any pack crosses 1.0x EV. Below, you can pick specific packs only."},
+            ].map(a=>(
+              <div key={a.title} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"6px 0",borderBottom:"1px solid #0e1e30"}}>
+                <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{a.icon}</span>
+                <div>
+                  <div style={{fontWeight:700,fontSize:11,color:a.c,marginBottom:2}}>{a.title}</div>
+                  <div style={{fontSize:9,color:"#3a5068",lineHeight:1.4}}>{a.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Pack-specific alerts */}
+        <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:5}}>
+          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:2}}>
+            SPECIFIC PACK ALERTS ({alerts.size > 0 ? `${alerts.size} selected` : "optional — adds to alerts above"})
+          </div>
+          <div style={{fontSize:9,color:"#3a5068",marginBottom:6,lineHeight:1.5}}>
+            Toggle a pack below to get an instant alert the moment that exact pack goes +EV.
+          </div>
+          {packs.map(p=>{
+            const isOn=alerts.has(p.id);
+            const ec=p.evRatio>=1.3?"#00ff87":p.evRatio>=1?"#4fd8a0":p.evRatio>=0.9?"#ffd166":"#ff3860";
+            const sg=p.evRatio>=1.3?"GREAT VALUE":p.evRatio>=1?"GOOD VALUE":p.evRatio>=0.9?"FAIR VALUE":"BELOW EV";
+            const sgc=p.evRatio>=1.3?"#00ff87":p.evRatio>=1?"#4f8fff":p.evRatio>=0.9?"#ffd166":"#ff3860";
+            return(
+              <div key={p.id} onClick={()=>onToggle(p.id)}
+                style={{border:`1px solid ${isOn?"rgba(0,255,135,.3)":"#122038"}`,borderRadius:8,padding:"9px 10px",cursor:"pointer",background:isOn?"rgba(0,255,135,.04)":"#0b1728",display:"flex",alignItems:"center",gap:9,transition:"all .15s"}}>
+                <img src={`https://api.courtyard.io/configs/vending-machine/${p.id}/resources/sealed_pack.png`} alt=""
+                  style={{width:26,height:36,objectFit:"contain",flexShrink:0}}
+                  onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:11,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                    <span style={{fontWeight:700,fontSize:10,color:ec,...M}}>{(+p.evRatio).toFixed(3)}x</span>
+                    <span style={{fontSize:7,fontWeight:700,color:sgc,background:`${sgc}18`,padding:"1px 5px",borderRadius:3,border:`1px solid ${sgc}33`,...M}}>{sg}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div style={{fontSize:8,color:"#2a4060",textAlign:"center" as const,...M,lineHeight:1.6}}>
-              Free forever · No account · 1-click to turn off
-            </div>
-          </div>
-        )}
-
-        {/* STEP: Pack selector */}
-        {showPackStep&&(
-          <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>
-              SELECT PACKS TO WATCH ({alerts.size} selected)
-            </div>
-            {packs.map(p=>{
-              const isOn=alerts.has(p.id);
-              const evColor2=evc(p.evRatio),sg=sig(p.evRatio),d=dec(p);
-              return(
-                <div key={p.id} onClick={()=>onToggle(p.id)}
-                  style={{border:`1px solid ${isOn?"rgba(255,209,102,.3)":"#122038"}`,borderRadius:9,padding:"10px 11px",cursor:"pointer",background:isOn?"rgba(255,209,102,.04)":"#0b1728",display:"flex",alignItems:"center",gap:9,transition:"all .15s"}}>
-                  <img src={packImg(p.id)} alt="" style={{width:30,height:42,objectFit:"contain",flexShrink:0}}
-                    onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:11,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,marginBottom:3}}>{p.name}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap" as const}}>
-                      <span style={{fontWeight:800,fontSize:10,color:evColor2,...M}}>{$x(p.evRatio)}</span>
-                      <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,fontSize:7}}>{sg.label}</span>
-                    </div>
-                    <div style={{fontSize:9,color:d.c,marginTop:2,opacity:.85,...M}}>{d.action}</div>
-                  </div>
-                  {/* Toggle */}
-                  <div style={{width:38,height:22,borderRadius:11,border:`1px solid ${isOn?"rgba(255,209,102,.4)":"#122038"}`,background:isOn?"rgba(255,209,102,.15)":"#060d18",position:"relative",flexShrink:0,transition:"all .2s"}}
-                    onClick={(e)=>{e.stopPropagation();onToggle(p.id);}}>
-                    <div style={{position:"absolute",top:3,left:isOn?19:3,width:14,height:14,borderRadius:"50%",background:isOn?"#ffd166":"#3a5068",transition:"all .2s"}}/>
-                  </div>
+                {/* Toggle */}
+                <div style={{width:36,height:20,borderRadius:10,border:`1px solid ${isOn?"rgba(0,255,135,.4)":"#122038"}`,background:isOn?"rgba(0,255,135,.12)":"#060d18",position:"relative",flexShrink:0,transition:"all .2s"}}>
+                  <div style={{position:"absolute",top:3,left:isOn?18:3,width:12,height:12,borderRadius:"50%",background:isOn?"#00ff87":"#3a5068",transition:"all .2s"}}/>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
 
-        {/* Footer */}
-        <div style={{padding:"8px 14px",borderTop:"1px solid #122038",flexShrink:0}}>
-          <div style={{fontSize:8,color:"#2a4060",textAlign:"center" as const,...M}}>
-            Alerts: once/hr per pack · No spam · Free
-          </div>
+        <div style={{padding:"8px 14px",borderTop:"1px solid #122038",flexShrink:0,textAlign:"center" as const}}>
+          <span style={{fontSize:8,color:"#2a4060",...M}}>Free forever · No account needed · 1-click to disable</span>
         </div>
       </div>
     </>
@@ -420,7 +335,6 @@ function Dashboard(){
 
   // Alert state
   const [alerts,setAlerts]          =useState<Set<string>>(new Set());
-  const [alertType,setAlertTypeRaw] =useState("smart");
   const [swStatus,setSwStatus]      =useState<"unknown"|"granted"|"denied"|"unsupported">("unknown");
   const [pushSub,setPushSub]        =useState<PushSubscription|null>(null);
   const [isSubscribed,setIsSubscribed]=useState(false);
@@ -498,57 +412,27 @@ function Dashboard(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           subscription:{endpoint:sub.endpoint,keys:{p256dh,auth}},
-          packIds,alertOnEv:true,alertOnBuyback:true,evThreshold:1.0,alertType:type,
+          packIds,alertOnEv:true,alertOnBuyback:true,evThreshold:1.0,alertType:'all',
         }),
       });
     }catch{}
   },[]);
 
-  // Bell on pack card — just opens the alert panel
-  // Don't try to subscribe here — let the panel guide the user properly
+  // Bell on card — toggle this specific pack alert
   const toggleAlert=useCallback(async(packId:string)=>{
-    // If notifications already work, toggle the pack directly
-    if(swStatus==="granted"&&pushSub){
-      const next=new Set(alerts);
-      next.has(packId)?next.delete(packId):next.add(packId);
-      setAlerts(next);
-      const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
-      addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert OFF for ${packName}`,"ok");
-      // Switch to pack type if not already, then save
-      const type=alertType==="smart"||alertType==="market"?"all":alertType;
-      if(type!==alertType) setAlertTypeRaw(type);
-      await saveSubscription(pushSub,Array.from(next),type);
-    } else {
-      // Not set up yet — open the alerts panel so user can enable properly
-      setAlertsOpen(true);
-      addToast("Enable alerts in the panel first — then use the bell buttons","warn");
-    }
-  },[alerts,swStatus,pushSub,data,alertType,saveSubscription]);
-
-  // Selecting alert type in panel — triggers permission if not yet granted
-  const setAlertType=useCallback(async(type:string)=>{
-    setAlertTypeRaw(type);
-    
-    // If not yet subscribed, trigger permission request right now
     if(swStatus!=="granted"||!pushSub){
-      const ok=await enableNotifications();
-      if(!ok) return; // user denied — don't save
-      // Get fresh subscription after enabling
-      try{
-        const reg=await navigator.serviceWorker.ready;
-        const sub=await reg.pushManager.getSubscription();
-        if(sub){
-          await saveSubscription(sub,Array.from(alerts),type);
-          addToast(`✅ ${type==="smart"?"🔥 Smart Alerts":type==="market"?"📊 Market Alerts":type==="pack"?"🔔 Pack Alerts":"⚡ All Alerts"} enabled!`,"ok");
-        }
-      }catch{}
+      // Not set up — open panel so user can enable
+      setAlertsOpen(true);
+      addToast("Enable notifications first — click the button in the panel","warn");
       return;
     }
-    
-    // Already subscribed — just update the type
-    await saveSubscription(pushSub,Array.from(alerts),type);
-    addToast(`${type==="smart"?"🔥 Smart":type==="market"?"📊 Market":type==="pack"?"🔔 Pack":"⚡ All"} Alerts active`,"ok");
-  },[swStatus,pushSub,alerts,enableNotifications,saveSubscription]);
+    const next=new Set(alerts);
+    next.has(packId)?next.delete(packId):next.add(packId);
+    setAlerts(next);
+    const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
+    addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert OFF for ${packName}`,"ok");
+    await saveSubscription(pushSub,Array.from(next),'all');
+  },[alerts,swStatus,pushSub,data,saveSubscription]);
 
   // Countdown
   useEffect(()=>{
@@ -561,7 +445,7 @@ function Dashboard(){
   const rows:Pack[]=data?[...data.packs].filter(p=>tab==="all"||p.category===tab).filter(p=>flt==="pos"?p.evRatio>=1:flt==="neg"?p.evRatio<1:true).sort((a,b)=>sort==="ev"?b.evRatio-a.evRatio:sort==="bb"?b.buybackEv-a.buybackEv:sort==="decision"?decScore(b)-decScore(a):sort==="wr"?b.winRate-a.winRate:a.price-b.price):[];
   const best=data?.packs[0];
   const budgetPacks=(b:number)=>data?.packs.filter(p=>p.price<=b).sort((a,c)=>decScore(c)-decScore(a)).slice(0,3)??[];
-  const alertCount=alertType==="pack"||alertType==="all"?alerts.size:alertType==="smart"||alertType==="market"?1:0;
+  const alertCount=alerts.size;
 
   return(
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"#060d18",color:"#c8dff0"}}>
@@ -577,7 +461,6 @@ function Dashboard(){
         open={alertsOpen} onClose={()=>setAlertsOpen(false)}
         packs={data?.packs??[]} alerts={alerts} onToggle={toggleAlert}
         swStatus={swStatus} onEnableNotifs={enableNotifications}
-        alertType={alertType} setAlertType={setAlertType}
         isSubscribed={isSubscribed}
       />
 
