@@ -83,7 +83,7 @@ body { background:#060d18 !important; color:#c8dff0; font-family:'Space Grotesk'
 .dp-grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .dp-tile{background:#060d18;border:1px solid #122038;border-radius:6px;padding:7px 9px}
 .dp-tile-l{font-size:7px;color:#3a5068;letter-spacing:1px;display:block;margin-bottom:2px;font-family:monospace}
-.dp-tile-v{font-family:monospace;font-weight:800;font-size:17px;line-height:1}
+.dp-tile-v{font-family:monospace;font-weight:800;font-size:15px;line-height:1}
 .fee-tbl{width:100%;font-size:10px;border-collapse:collapse;font-family:monospace}
 .fee-tbl td{padding:4px 0;border-bottom:1px solid #122038;color:#3a5068}
 .fee-tbl tr.tot td{color:#c8dff0;font-weight:700;border:none}
@@ -429,13 +429,13 @@ function Dashboard() {
                   <div className="dp-grid2">
                     <div className="dp-tile" style={{borderColor:p.evRatio>=1?"rgba(0,255,135,.2)":"rgba(255,56,96,.15)"}}>
                       <span className="dp-tile-l">FMV EV</span>
-                      <div className="dp-tile-v" style={{color:evC}}>{(p.evRatio)}</div>
+                      <div className="dp-tile-v" style={{color:evC}}>{$x(p.evRatio)}</div>
                       <div style={{fontSize:8,color:"#3a5068",marginTop:3,fontFamily:"monospace"}}>{p.evRatio>=1?"+":"-"}{(Math.abs(p.avgFmv-p.price))} avg</div>
                     </div>
                     <div className="dp-tile" style={{borderColor:p.buybackEv>=1?"rgba(79,143,255,.2)":"rgba(255,56,96,.15)"}}>
                       <span className="dp-tile-l">BUYBACK EV</span>
-                      <div className="dp-tile-v" style={{color:bbC}}>{(p.buybackEv)}</div>
-                      <div style={{fontSize:8,color:"#3a5068",marginTop:3,fontFamily:"monospace"}}>≈{(cashOut)} cash</div>
+                      <div className="dp-tile-v" style={{color:bbC}}>{$x(p.buybackEv)}</div>
+                      <div style={{fontSize:8,color:"#3a5068",marginTop:3,fontFamily:"monospace"}}>≈{$f(cashOut)} cash</div>
                     </div>
                   </div>
                   <span className="sig" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start"}}>{sg.label}</span>
@@ -444,9 +444,9 @@ function Dashboard() {
                   <span className="dp-lbl">PACK STATS</span>
                   <div className="dp-grid2">
                     <div className="dp-tile"><span className="dp-tile-l">WIN RATE</span><div className="dp-tile-v" style={{color:p.winRate>=.5?"#00ff87":"#3a5068"}}>{(p.winRate*100).toFixed(1)}%</div></div>
-                    <div className="dp-tile"><span className="dp-tile-l">BEST PULL</span><div className="dp-tile-v" style={{color:"#00ff87"}}>{(p.bestPull)}</div></div>
-                    <div className="dp-tile"><span className="dp-tile-l">AVG FMV</span><div className="dp-tile-v" style={{color:evC}}>{(p.avgFmv)}</div></div>
-                    <div className="dp-tile"><span className="dp-tile-l">CASH OUT</span><div className="dp-tile-v" style={{color:bbC}}>{(cashOut)}</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">BEST PULL</span><div className="dp-tile-v" style={{color:"#00ff87"}}>{$f(p.bestPull)}</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">AVG FMV</span><div className="dp-tile-v" style={{color:evC}}>{$f(p.avgFmv)}</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">CASH OUT</span><div className="dp-tile-v" style={{color:bbC}}>{$f(cashOut)}</div></div>
                   </div>
                 </div>
                 <div className="dp-sec">
@@ -454,10 +454,10 @@ function Dashboard() {
                   <table className="fee-tbl"><tbody>
                     <tr><td>Advertised price</td><td style={{textAlign:"right"}}>{(p.price)}</td></tr>
                     <tr><td>True cost (+7.4%)</td><td style={{textAlign:"right",color:"#ff3860"}}>{(trueCost)}</td></tr>
-                    <tr><td>Avg FMV</td><td style={{textAlign:"right",color:evC}}>{(p.avgFmv)}</td></tr>
-                    <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right"}}>{(p.avgFmv*0.9)}</td></tr>
+                    <tr><td>Avg FMV</td><td style={{textAlign:"right",color:evC}}>{$f(p.avgFmv)}</td></tr>
+                    <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right"}}>{$f(p.avgFmv*0.9)}</td></tr>
                     <tr><td>Processing fee (−6%)</td><td style={{textAlign:"right",color:"#ff3860"}}>−{(p.avgFmv*0.9*0.06)}</td></tr>
-                    <tr className="tot"><td style={{color:"#c8dff0",paddingTop:6}}>Cash in hand</td><td style={{textAlign:"right",color:bbC,fontSize:15,paddingTop:6}}>{(cashOut)}</td></tr>
+                    <tr className="tot"><td style={{color:"#c8dff0",paddingTop:6}}>Cash in hand</td><td style={{textAlign:"right",color:bbC,fontSize:15,paddingTop:6}}>{$f(cashOut)}</td></tr>
                   </tbody></table>
                 </div>
                 <a href={"https://courtyard.io/vending-machine/"+p.id} target="_blank" rel="noreferrer"
