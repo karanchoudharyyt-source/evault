@@ -210,9 +210,10 @@ function AlertPanel({
   const [step,setStep]=useState<"type"|"packs">("type");
 
   const handleEnable=async()=>{
-    setEnabling(true);
+    // Don't call setEnabling(true) here — it triggers a React re-render
+    // which breaks the browser gesture chain and prevents the popup from firing
     const ok=await onEnableNotifs();
-    setEnabling(false);
+    setEnabling(!ok); // only update state AFTER permission request completes
     if(ok) setStep("type");
   };
 
@@ -274,7 +275,7 @@ function AlertPanel({
                 </p>
                 <button onClick={handleEnable} disabled={enabling}
                   style={{width:"100%",padding:"9px",background:enabling?"#1a2a3a":"#ffd166",color:"#000",border:"none",borderRadius:7,fontWeight:800,fontSize:12,cursor:"pointer",...M}}>
-                  {enabling?"Requesting...":"🔔 Enable Notifications →"}
+                  {enabling?"Setting up...":"🔔 Enable — browser will ask to Allow →"}
                 </button>
               </div>
             )}
@@ -447,16 +448,29 @@ function Dashboard(){
     }).catch(()=>{});
   },[]);
 
-  // Enable notifications — smooth flow
+  // Enable notifications — requestPermission MUST be called first before any setState
+  // Otherwise React re-renders break the browser's user-gesture chain and popup never fires
   const enableNotifications=useCallback(async():Promise<boolean>=>{
-    if(!("serviceWorker" in navigator)){addToast("Your browser doesn't support push notifications","err");return false;}
+    if(!("serviceWorker" in navigator)||!("Notification" in window)){
+      addToast("Your browser doesn't support push notifications","err");
+      return false;
+    }
     try{
+      // ⚠️ Call requestPermission IMMEDIATELY — no setState before this line
+      // Browser only shows popup if called synchronously within a user click
       const perm=await Notification.requestPermission();
-      if(perm!=="granted"){
+      
+      if(perm==="denied"){
         setSwStatus("denied");
-        addToast("Click Allow in the browser popup to enable notifications","warn");
+        addToast("Notifications blocked — click 🔒 in address bar → Notifications → Allow","warn");
         return false;
       }
+      if(perm!=="granted"){
+        addToast("Please click Allow when the browser asks","warn");
+        return false;
+      }
+      
+      // Permission granted — now do the rest
       setSwStatus("granted");
       const reg=await navigator.serviceWorker.ready;
       let sub=await reg.pushManager.getSubscription();
@@ -471,7 +485,7 @@ function Dashboard(){
       addToast("✅ Notifications enabled! Choose your alert type below","ok");
       return true;
     }catch(e:any){
-      addToast(`Failed: ${e.message}`,"err");
+      addToast(`Notification setup failed: ${e.message}`,"err");
       return false;
     }
   },[]);
