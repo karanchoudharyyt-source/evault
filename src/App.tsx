@@ -260,25 +260,14 @@ function AlertPanel({
         </div>
 
         {/* Notification status */}
-        {swStatus!=="granted"&&(
+        {swStatus==="denied"&&(
           <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-            {swStatus==="denied"?(
-              <div style={{background:"rgba(255,56,96,.06)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 11px"}}>
-                <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked</div>
-                <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>Click the 🔒 lock in the address bar → Notifications → Allow → refresh the page.</div>
+            <div style={{background:"rgba(255,56,96,.06)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 11px"}}>
+              <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked by Browser</div>
+              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>
+                Click the 🔒 lock in your address bar → <strong style={{color:"#c8dff0"}}>Notifications</strong> → <strong style={{color:"#00ff87"}}>Allow</strong> → refresh the page.
               </div>
-            ):(
-              <div style={{background:"rgba(255,209,102,.05)",border:"1px solid rgba(255,209,102,.2)",borderRadius:8,padding:"10px 12px"}}>
-                <div style={{fontWeight:700,fontSize:11,color:"#ffd166",marginBottom:5}}>Enable push notifications first</div>
-                <p style={{fontSize:9,color:"#3a5068",lineHeight:1.5,marginBottom:8}}>
-                  Your browser will show a one-time popup asking <strong style={{color:"#c8dff0"}}>"Allow notifications?"</strong> — click <strong style={{color:"#00ff87"}}>Allow</strong>. After that, alerts fire even when this tab is closed.
-                </p>
-                <button onClick={handleEnable} disabled={enabling}
-                  style={{width:"100%",padding:"9px",background:enabling?"#1a2a3a":"#ffd166",color:"#000",border:"none",borderRadius:7,fontWeight:800,fontSize:12,cursor:"pointer",...M}}>
-                  {enabling?"Setting up...":"🔔 Enable — browser will ask to Allow →"}
-                </button>
-              </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -288,7 +277,16 @@ function AlertPanel({
             <div style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.15)",borderRadius:7,padding:"7px 10px",display:"flex",alignItems:"center",gap:8}}>
               <span className="ld" style={{width:5,height:5}}/>
               <span style={{fontSize:10,color:"#00ff87",fontWeight:700}}>Alerts Active</span>
-              <span style={{fontSize:9,color:"#3a5068",...M}}>Server checks every 60s · works when closed</span>
+              <span style={{fontSize:9,color:"#3a5068",...M}}>Server checks every 60s · works when browser closed</span>
+            </div>
+          </div>
+        )}
+
+        {/* Not yet enabled hint */}
+        {swStatus!=="granted"&&swStatus!=="denied"&&!showPackStep&&(
+          <div style={{padding:"8px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
+            <div style={{background:"rgba(255,209,102,.04)",border:"1px solid rgba(255,209,102,.18)",borderRadius:7,padding:"7px 10px",fontSize:9,color:"#ffd166",lineHeight:1.5}}>
+              👇 <strong>Pick an alert type below</strong> — browser will ask you to Allow notifications. Click Allow and you're done.
             </div>
           </div>
         )}
@@ -506,34 +504,51 @@ function Dashboard(){
     }catch{}
   },[]);
 
-  // Toggle per-pack alert (from card bell)
+  // Bell on pack card — just opens the alert panel
+  // Don't try to subscribe here — let the panel guide the user properly
   const toggleAlert=useCallback(async(packId:string)=>{
-    let sub=pushSub;
-    if(swStatus!=="granted"||!sub){
-      const ok=await enableNotifications();
-      if(!ok) return;
-      sub=await (async()=>{
-        try{const reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription();}
-        catch{return null;}
-      })();
-      if(!sub) return;
+    // If notifications already work, toggle the pack directly
+    if(swStatus==="granted"&&pushSub){
+      const next=new Set(alerts);
+      next.has(packId)?next.delete(packId):next.add(packId);
+      setAlerts(next);
+      const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
+      addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert OFF for ${packName}`,"ok");
+      // Switch to pack type if not already, then save
+      const type=alertType==="smart"||alertType==="market"?"all":alertType;
+      if(type!==alertType) setAlertTypeRaw(type);
+      await saveSubscription(pushSub,Array.from(next),type);
+    } else {
+      // Not set up yet — open the alerts panel so user can enable properly
+      setAlertsOpen(true);
+      addToast("Enable alerts in the panel first — then use the bell buttons","warn");
     }
-    const next=new Set(alerts);
-    next.has(packId)?next.delete(packId):next.add(packId);
-    setAlerts(next);
-    const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
-    addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert removed for ${packName}`,"ok");
-    await saveSubscription(sub,Array.from(next),alertType);
-  },[alerts,swStatus,pushSub,data,alertType,enableNotifications,saveSubscription]);
+  },[alerts,swStatus,pushSub,data,alertType,saveSubscription]);
 
-  // When alertType changes, re-save
+  // Selecting alert type in panel — triggers permission if not yet granted
   const setAlertType=useCallback(async(type:string)=>{
     setAlertTypeRaw(type);
-    if(pushSub&&isSubscribed){
-      await saveSubscription(pushSub,Array.from(alerts),type);
-      addToast(`Alert type set to: ${type==="smart"?"🔥 Smart":type==="market"?"📊 Market":type==="pack"?"🔔 Pack":"⚡ All"}`,"ok");
+    
+    // If not yet subscribed, trigger permission request right now
+    if(swStatus!=="granted"||!pushSub){
+      const ok=await enableNotifications();
+      if(!ok) return; // user denied — don't save
+      // Get fresh subscription after enabling
+      try{
+        const reg=await navigator.serviceWorker.ready;
+        const sub=await reg.pushManager.getSubscription();
+        if(sub){
+          await saveSubscription(sub,Array.from(alerts),type);
+          addToast(`✅ ${type==="smart"?"🔥 Smart Alerts":type==="market"?"📊 Market Alerts":type==="pack"?"🔔 Pack Alerts":"⚡ All Alerts"} enabled!`,"ok");
+        }
+      }catch{}
+      return;
     }
-  },[pushSub,isSubscribed,alerts,saveSubscription]);
+    
+    // Already subscribed — just update the type
+    await saveSubscription(pushSub,Array.from(alerts),type);
+    addToast(`${type==="smart"?"🔥 Smart":type==="market"?"📊 Market":type==="pack"?"🔔 Pack":"⚡ All"} Alerts active`,"ok");
+  },[swStatus,pushSub,alerts,enableNotifications,saveSubscription]);
 
   // Countdown
   useEffect(()=>{
