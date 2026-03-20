@@ -332,6 +332,7 @@ function AlertPanel({
           <span style={{fontSize:8,color:"#2a4060",...M}}>Free forever · No account needed · 1-click to disable</span>
         </div>
       </div>
+    </>
   );
 }
 
