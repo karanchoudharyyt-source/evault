@@ -5,7 +5,7 @@ import { Pack, PullRecord } from "./data/packs";
 
 const queryClient = new QueryClient();
 
-const VAPID_PUBLIC_KEY = "QeEgkcUz5JkKnw2rANRItufqn1Oc1DcblY7dyuPCGrzLztocjn1LPdv_41RINN9MkTZcVS2aqtim9VRGcnPUng";
+const VAPID_PUBLIC_KEY = "BHKMKBK0jPmrj4TNW-LP7e9Y4LCPkeHpzJ_nNJEB4marLnzRdTJWKGlwnciZW_bFerWl35oEcopeh8YuD4Hofd0";
 
 const CAT_COLOR: Record<string,string> = {
   Pokémon:"#ffd166",Baseball:"#4f8fff",Basketball:"#ff7f3f",
@@ -234,10 +234,31 @@ function AlertPanel({
               </div>
             </div>
           ):swStatus==="denied"?(
-            <div style={{background:"rgba(255,56,96,.05)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 12px"}}>
-              <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked</div>
-              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>
-                Click the <strong style={{color:"#c8dff0"}}>🔒 lock</strong> in your address bar → Notifications → <strong style={{color:"#00ff87"}}>Allow</strong> → refresh the page.
+            <div style={{background:"rgba(255,56,96,.05)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"10px 12px"}}>
+              <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:6}}>⛔ Notifications Blocked by Chrome</div>
+              <div style={{fontSize:9,color:"#3a5068",lineHeight:1.7,marginBottom:8}}>
+                Chrome remembered a previous "Block" — you need to unblock it once manually. Do this:
+              </div>
+              {[
+                {n:"1", t:'Click the 🔒 lock icon in the address bar (left of the URL)'},
+                {n:"2", t:'Click "Site settings"'},
+                {n:"3", t:'Find "Notifications" → change to "Allow"'},
+                {n:"4", t:'Refresh this page — button will appear'},
+              ].map(s=>(
+                <div key={s.n} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:5}}>
+                  <span style={{width:16,height:16,borderRadius:"50%",background:"rgba(255,56,96,.15)",border:"1px solid rgba(255,56,96,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:"#ff3860",flexShrink:0,...M}}>{s.n}</span>
+                  <span style={{fontSize:9,color:"#c8dff0",lineHeight:1.5}}>{s.t}</span>
+                </div>
+              ))}
+              <div style={{display:"flex",gap:6,marginTop:8}}>
+                <a href="chrome://settings/content/notifications" target="_blank" rel="noreferrer"
+                  style={{flex:1,padding:"7px",background:"rgba(255,56,96,.1)",border:"1px solid rgba(255,56,96,.25)",borderRadius:6,fontSize:9,color:"#ff3860",fontWeight:700,textDecoration:"none",textAlign:"center" as const,...M}}>
+                  Open Chrome Notification Settings ↗
+                </a>
+                <button onClick={()=>window.location.reload()}
+                  style={{padding:"7px 12px",background:"#0b1728",border:"1px solid #122038",borderRadius:6,fontSize:9,color:"#3a5068",cursor:"pointer",fontWeight:700,...M}}>
+                  Refresh ↺
+                </button>
               </div>
             </div>
           ):(
@@ -342,7 +363,8 @@ function Dashboard(){
 
   const addToast=(msg:string,type:"ok"|"warn"|"err"="ok")=>{
     const id=++toastId.current;
-    setToasts(t=>[...t,{id,msg,type}]);
+    // Cap at 3 toasts max — clear oldest if exceeded
+    setToasts(t=>{const next=[...t.slice(-2),{id,msg,type}];return next;});
   };
   const removeToast=(id:number)=>setToasts(t=>t.filter(x=>x.id!==id));
 
@@ -360,29 +382,27 @@ function Dashboard(){
     }).catch(()=>{});
   },[]);
 
-  // Enable notifications — requestPermission MUST be called first before any setState
-  // Otherwise React re-renders break the browser's user-gesture chain and popup never fires
+  // Guard against multiple simultaneous calls
+  const enablingRef = useRef(false);
+
   const enableNotifications=useCallback(async():Promise<boolean>=>{
+    // Prevent multiple simultaneous calls (causes the toast spam)
+    if(enablingRef.current) return false;
     if(!("serviceWorker" in navigator)||!("Notification" in window)){
       addToast("Your browser doesn't support push notifications","err");
       return false;
     }
+    enablingRef.current=true;
     try{
-      // ⚠️ Call requestPermission IMMEDIATELY — no setState before this line
-      // Browser only shows popup if called synchronously within a user click
+      // ⚠️ requestPermission MUST be first — no setState before this
       const perm=await Notification.requestPermission();
-      
       if(perm==="denied"){
         setSwStatus("denied");
-        addToast("Notifications blocked — click 🔒 in address bar → Notifications → Allow","warn");
         return false;
       }
       if(perm!=="granted"){
-        addToast("Please click Allow when the browser asks","warn");
         return false;
       }
-      
-      // Permission granted — now do the rest
       setSwStatus("granted");
       const reg=await navigator.serviceWorker.ready;
       let sub=await reg.pushManager.getSubscription();
@@ -394,11 +414,14 @@ function Dashboard(){
       }
       setPushSub(sub);
       setIsSubscribed(true);
-      addToast("✅ Notifications enabled! Choose your alert type below","ok");
+      addToast("✅ Notifications enabled!","ok");
       return true;
     }catch(e:any){
-      addToast(`Notification setup failed: ${e.message}`,"err");
+      // Only show one toast, not multiple
+      addToast("Setup failed — try refreshing the page","err");
       return false;
+    }finally{
+      enablingRef.current=false;
     }
   },[]);
 
