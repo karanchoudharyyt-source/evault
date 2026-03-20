@@ -273,33 +273,26 @@ function AlertPanel({
           )}
         </div>
 
-        {/* What alerts you get */}
-        <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:7}}>WHAT YOU'LL GET AUTOMATICALLY</div>
-          <div style={{display:"flex",flexDirection:"column" as const,gap:5}}>
-            {[
-              {icon:"🔥",title:"Strong Buy Alert",c:"#00ff87",desc:"When any pack hits 1.2x+ buyback EV — profit after ALL fees. Rare, always worth acting on."},
-              {icon:"📊",title:"Market Alert",c:"#4f8fff",desc:"When the market turns positive — summary of the best +EV packs right now."},
-              {icon:"⚡",title:"Pack EV Alert",c:"#ffd166",desc:"When any pack crosses 1.0x EV. Below, you can pick specific packs only."},
-            ].map(a=>(
-              <div key={a.title} style={{display:"flex",gap:9,alignItems:"flex-start",padding:"6px 0",borderBottom:"1px solid #0e1e30"}}>
-                <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{a.icon}</span>
-                <div>
-                  <div style={{fontWeight:700,fontSize:11,color:a.c,marginBottom:2}}>{a.title}</div>
-                  <div style={{fontSize:9,color:"#3a5068",lineHeight:1.4}}>{a.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Pack-specific alerts */}
         <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:5}}>
-          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:2}}>
-            SPECIFIC PACK ALERTS ({alerts.size > 0 ? `${alerts.size} selected` : "optional — adds to alerts above"})
+          {/* Auto alerts summary — compact */}
+          <div style={{background:"#0b1728",border:"1px solid #122038",borderRadius:7,padding:"8px 10px",marginBottom:8}}>
+            <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:5}}>YOU'LL GET AUTOMATICALLY</div>
+            <div style={{display:"flex",flexDirection:"column" as const,gap:3}}>
+              {[
+                {e:"🔥",t:"Strong Buy",c:"#00ff87",s:"buyback ≥ 1.2x · profit after all fees"},
+                {e:"📊",t:"Market Alert",c:"#4f8fff",s:"any pack +EV · summary"},
+              ].map(a=>(
+                <div key={a.t} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:11}}>{a.e}</span>
+                  <span style={{fontSize:10,fontWeight:700,color:a.c}}>{a.t}</span>
+                  <span style={{fontSize:9,color:"#3a5068"}}>{a.s}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{fontSize:9,color:"#3a5068",marginBottom:6,lineHeight:1.5}}>
-            Toggle a pack below to get an instant alert the moment that exact pack goes +EV.
+          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>
+            SPECIFIC PACK ALERTS {alerts.size > 0 ? `(${alerts.size} selected)` : "(optional)"}
           </div>
           {packs.map(p=>{
             const isOn=alerts.has(p.id);
@@ -580,7 +573,7 @@ function Dashboard(){
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
 
         {/* Sidebar */}
-        <aside style={{width:178,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <aside style={{width:200,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"9px 10px 3px",fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>WORKSPACE</div>
           {([
             ["packs","⚡","EV Terminal"],
