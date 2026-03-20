@@ -75,7 +75,23 @@ body { background:#060d18 !important; color:#c8dff0; font-family:'Space Grotesk'
 .wr-fill{height:100%;border-radius:2px}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .fi{animation:fi .2s ease both}
+.detail-panel{width:0;flex-shrink:0;border-left:1px solid #122038;background:#07101f;display:flex;flex-direction:column;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1)}
+.detail-panel.open{width:310px}
+.dp-scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.dp-sec{background:#0b1728;border:1px solid #122038;border-radius:8px;padding:11px;display:flex;flex-direction:column;gap:7px}
+.dp-lbl{font-size:7px;letter-spacing:1.5px;color:#3a5068;font-family:monospace}
+.dp-grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.dp-tile{background:#060d18;border:1px solid #122038;border-radius:6px;padding:7px 9px}
+.dp-tile-l{font-size:7px;color:#3a5068;letter-spacing:1px;display:block;margin-bottom:2px;font-family:monospace}
+.dp-tile-v{font-family:monospace;font-weight:800;font-size:17px;line-height:1}
+.fee-tbl{width:100%;font-size:10px;border-collapse:collapse;font-family:monospace}
+.fee-tbl td{padding:4px 0;border-bottom:1px solid #122038;color:#3a5068}
+.fee-tbl tr.tot td{color:#c8dff0;font-weight:700;border:none}
+.dp-close{cursor:pointer;color:#3a5068;width:20px;height:20px;border:1px solid #122038;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:color .15s}
+.dp-close:hover{color:#c8dff0}
+.pack-row.selected{background:rgba(0,255,135,.04)}
 `;
+
 
 function Dashboard() {
   const { data, isLoading, refetch } = useCourtyardData();
@@ -84,6 +100,7 @@ function Dashboard() {
   const [sort, setSort]  = useState<"ev"|"bb"|"wr"|"price">("ev");
   const [flt, setFlt]    = useState<"all"|"pos"|"neg">("all");
   const [cd, setCd]      = useState(300);
+  const [sel, setSel]    = useState<Pack|null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setCd(c => { if (c<=1){refetch();return 300;} return c-1; }), 1000);
@@ -302,7 +319,7 @@ function Dashboard() {
                       const evC  = pack.evRatio>=1.3?"#00ff87":pack.evRatio>=1?"#4fd8a0":pack.evRatio>=0.9?"#ffd166":"#ff3860";
                       const bbC  = pack.buybackEv>=1?"#00ff87":"#ff3860";
                       return (
-                        <tr key={pack.id} className="pack-row fi">
+                        <tr key={pack.id} className={`pack-row fi${sel?.id===pack.id?" selected":""}`} onClick={()=>setSel(sel?.id===pack.id?null:pack)} style={{cursor:"pointer"}}>
                           <td style={{ padding:"10px 10px",color:"#3a5068",...m,fontWeight:700,fontSize:10 }}>#{idx+1}</td>
                           <td style={{ padding:"10px 6px 10px 10px" }}>
                             <div style={{ display:"flex",alignItems:"center",gap:9 }}>
@@ -387,6 +404,72 @@ function Dashboard() {
             </div>
           )}
         </main>
+
+        {/* DETAIL PANEL */}
+        <div className={sel ? "detail-panel open" : "detail-panel"}>
+          {sel && (()=>{
+            const p=sel;
+            const evC=p.evRatio>=1.3?"#00ff87":p.evRatio>=1?"#4fd8a0":p.evRatio>=0.9?"#ffd166":"#ff3860";
+            const bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
+            const sg=signal(p.evRatio);
+            const trueCost=p.price*1.074;
+            const cashOut=p.avgFmv*0.9*0.94;
+            return (<>
+              <div style={{padding:"11px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
+                <img src={packImg(p.id)} alt="" style={{width:26,height:38,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                  <div style={{fontSize:9,color:"#3a5068",marginTop:2,fontFamily:"monospace"}}>{p.category} · ${p.price}/pack · {p.totalPulls} pulls</div>
+                </div>
+                <button className="dp-close" onClick={()=>setSel(null)}>✕</button>
+              </div>
+              <div className="dp-scroll">
+                <div className="dp-sec">
+                  <span className="dp-lbl">EXPECTED VALUE</span>
+                  <div className="dp-grid2">
+                    <div className="dp-tile" style={{borderColor:p.evRatio>=1?"rgba(0,255,135,.2)":"rgba(255,56,96,.15)"}}>
+                      <span className="dp-tile-l">FMV EV</span>
+                      <div className="dp-tile-v" style={{color:evC}}>{(p.evRatio)}</div>
+                      <div style={{fontSize:8,color:"#3a5068",marginTop:3,fontFamily:"monospace"}}>{p.evRatio>=1?"+":"-"}{(Math.abs(p.avgFmv-p.price))} avg</div>
+                    </div>
+                    <div className="dp-tile" style={{borderColor:p.buybackEv>=1?"rgba(79,143,255,.2)":"rgba(255,56,96,.15)"}}>
+                      <span className="dp-tile-l">BUYBACK EV</span>
+                      <div className="dp-tile-v" style={{color:bbC}}>{(p.buybackEv)}</div>
+                      <div style={{fontSize:8,color:"#3a5068",marginTop:3,fontFamily:"monospace"}}>≈{(cashOut)} cash</div>
+                    </div>
+                  </div>
+                  <span className="sig" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start"}}>{sg.label}</span>
+                </div>
+                <div className="dp-sec">
+                  <span className="dp-lbl">PACK STATS</span>
+                  <div className="dp-grid2">
+                    <div className="dp-tile"><span className="dp-tile-l">WIN RATE</span><div className="dp-tile-v" style={{color:p.winRate>=.5?"#00ff87":"#3a5068"}}>{(p.winRate*100).toFixed(1)}%</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">BEST PULL</span><div className="dp-tile-v" style={{color:"#00ff87"}}>{(p.bestPull)}</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">AVG FMV</span><div className="dp-tile-v" style={{color:evC}}>{(p.avgFmv)}</div></div>
+                    <div className="dp-tile"><span className="dp-tile-l">CASH OUT</span><div className="dp-tile-v" style={{color:bbC}}>{(cashOut)}</div></div>
+                  </div>
+                </div>
+                <div className="dp-sec">
+                  <span className="dp-lbl">💡 FEE BREAKDOWN</span>
+                  <table className="fee-tbl"><tbody>
+                    <tr><td>Advertised price</td><td style={{textAlign:"right"}}>{(p.price)}</td></tr>
+                    <tr><td>True cost (+7.4%)</td><td style={{textAlign:"right",color:"#ff3860"}}>{(trueCost)}</td></tr>
+                    <tr><td>Avg FMV</td><td style={{textAlign:"right",color:evC}}>{(p.avgFmv)}</td></tr>
+                    <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right"}}>{(p.avgFmv*0.9)}</td></tr>
+                    <tr><td>Processing fee (−6%)</td><td style={{textAlign:"right",color:"#ff3860"}}>−{(p.avgFmv*0.9*0.06)}</td></tr>
+                    <tr className="tot"><td style={{color:"#c8dff0",paddingTop:6}}>Cash in hand</td><td style={{textAlign:"right",color:bbC,fontSize:15,paddingTop:6}}>{(cashOut)}</td></tr>
+                  </tbody></table>
+                </div>
+                <a href={"https://courtyard.io/vending-machine/"+p.id} target="_blank" rel="noreferrer"
+                  style={{display:"block",textAlign:"center",padding:"11px",borderRadius:8,fontWeight:800,fontSize:13,textDecoration:"none",background:p.evRatio>=1?"#00ff87":"#0b1728",color:p.evRatio>=1?"#000":"#3a5068",border:p.evRatio>=1?"none":"1px solid #122038"}}>
+                  {p.evRatio>=1?"🟢 Buy on Courtyard →":"View on Courtyard →"}
+                </a>
+                <div style={{fontSize:8,color:"#3a5068",textAlign:"center",fontFamily:"monospace",lineHeight:1.6,padding:"4px 0"}}>For informational purposes only. Not financial advice.</div>
+              </div>
+            </>);
+          })()}
+        </div>
+
       </div>
 
       {/* Disclaimer */}
