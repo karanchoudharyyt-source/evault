@@ -97,7 +97,7 @@ body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',syst
 .hstat{padding:3px 10px;border:1px solid #122038;border-radius:5px;text-align:center;flex-shrink:0}
 .hstat-l{font-size:7px;color:#3a5068;letter-spacing:1px;font-family:monospace}
 .hstat-v{font-weight:800;font-size:14px;line-height:1.2}
-.sb-btn{all:unset;display:flex;align-items:center;gap:7px;padding:7px 10px;font-size:11px;border-left:2px solid transparent;cursor:pointer;color:#3a5068;width:100%;transition:all .1s}
+.sb-btn{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:7px;padding:7px 12px;font-size:11px;border-left:2px solid transparent;cursor:pointer;color:#3a5068;width:100%;transition:all .1s;overflow:hidden}
 .sb-btn:hover{color:#c8dff0;background:rgba(255,255,255,.02)}
 .sb-btn.on{color:#c8dff0}
 .cat-tab{padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid #122038;background:transparent;color:#3a5068;font-family:monospace;transition:all .15s;white-space:nowrap}
@@ -573,7 +573,7 @@ function Dashboard(){
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
 
         {/* Sidebar */}
-        <aside style={{width:200,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <aside style={{width:210,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"9px 10px 3px",fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>WORKSPACE</div>
           {([
             ["packs","⚡","EV Terminal"],
@@ -581,17 +581,19 @@ function Dashboard(){
             ["feed","📋","Pull Feed"],
           ] as [string,string,string][]).map(([v,ico,lbl])=>(
             <button key={v} className={`sb-btn${view===v?" on":""}`} onClick={()=>setView(v as any)}
-              style={{borderLeftColor:view===v?"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent"}}>
-              {ico} {lbl}
+              style={{borderLeftColor:view===v?"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent",color:view===v?"#c8dff0":"#3a5068"}}>
+              <span style={{flexShrink:0}}>{ico}</span>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>{lbl}</span>
             </button>
           ))}
           {/* Alerts — opens side panel */}
           <button className={`sb-btn${alertsOpen?" on":""}`} onClick={()=>setAlertsOpen(true)}
-            style={{borderLeftColor:alertsOpen?"#ffd166":"transparent",background:alertsOpen?"rgba(255,255,255,.025)":"transparent"}}>
-            🔔 EV Alerts
+            style={{borderLeftColor:alertsOpen?"#ffd166":"transparent",background:alertsOpen?"rgba(255,255,255,.025)":"transparent",color:alertsOpen?"#ffd166":"#3a5068"}}>
+            <span style={{flexShrink:0}}>🔔</span>
+            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>EV Alerts</span>
             {isSubscribed
-              ? <span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.08)",padding:"1px 5px",borderRadius:3,...M}}>LIVE</span>
-              : <span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:"#ffd166",background:"rgba(255,209,102,.08)",padding:"1px 5px",borderRadius:3,...M}}>SET UP</span>
+              ? <span style={{flexShrink:0,fontSize:7,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.12)",padding:"2px 5px",borderRadius:3,...M}}>LIVE</span>
+              : <span style={{flexShrink:0,fontSize:7,fontWeight:700,color:"#ffd166",background:"rgba(255,209,102,.1)",padding:"2px 5px",borderRadius:3,...M}}>SET UP</span>
             }
           </button>
 
@@ -603,10 +605,10 @@ function Dashboard(){
             const active=tab===c;
             return(
               <button key={c} className={`sb-btn${active?" on":""}`} onClick={()=>{setTab(c);setView("packs");}}
-                style={{borderLeftColor:active?color:"transparent",background:active?"rgba(255,255,255,.025)":"transparent"}}>
+                style={{borderLeftColor:active?color:"transparent",background:active?"rgba(255,255,255,.025)":"transparent",color:active?"#c8dff0":"#3a5068"}}>
                 <span style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0,display:"inline-block"}}/>
-                <span style={{flex:1}}>{c==="all"?"All Markets":c}</span>
-                {buyN>0&&<span style={{fontSize:8,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.08)",padding:"1px 4px",borderRadius:3,...M}}>{buyN}↑</span>}
+                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>{c==="all"?"All Markets":c}</span>
+                {buyN>0&&<span style={{flexShrink:0,fontSize:8,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.08)",padding:"1px 4px",borderRadius:3,...M}}>{buyN}↑</span>}
               </button>
             );
           })}
