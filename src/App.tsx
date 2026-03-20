@@ -5,7 +5,6 @@ import { Pack, PullRecord } from "./data/packs";
 
 const queryClient = new QueryClient();
 
-// ─── Config ───────────────────────────────────────────────────────────────────
 const VAPID_PUBLIC_KEY = "QeEgkcUz5JkKnw2rANRItufqn1Oc1DcblY7dyuPCGrzLztocjn1LPdv_41RINN9MkTZcVS2aqtim9VRGcnPUng";
 
 const CAT_COLOR: Record<string,string> = {
@@ -14,11 +13,10 @@ const CAT_COLOR: Record<string,string> = {
   Sports:"#9f7aea",Magic:"#e040fb",Comics:"#ff5252",Watch:"#b0bec5",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const $f = (n:number) => `$${(+n).toFixed(2)}`;
-const $x = (n:number) => `${(+n).toFixed(3)}x`;
-const $p = (n:number) => `${(+n*100).toFixed(1)}%`;
-const packImg = (id:string) => `https://api.courtyard.io/configs/vending-machine/${id}/resources/sealed_pack.png`;
+const $f=(n:number)=>`$${(+n).toFixed(2)}`;
+const $x=(n:number)=>`${(+n).toFixed(3)}x`;
+const $p=(n:number)=>`${(+n*100).toFixed(1)}%`;
+const packImg=(id:string)=>`https://api.courtyard.io/configs/vending-machine/${id}/resources/sealed_pack.png`;
 function ago(ts:string){const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);return s<60?`${s}s`:s<3600?`${Math.floor(s/60)}m`:`${Math.floor(s/3600)}h`;}
 
 function sig(ev:number){
@@ -29,38 +27,33 @@ function sig(ev:number){
 }
 
 function dec(pack:Pack){
-  const bb=pack.buybackEv, ev=pack.evRatio;
-  if(bb>=1.2)return{action:"🔥 STRONG BUY",c:"#00ff87",bg:"rgba(0,255,135,.1)", reason:`Buyback EV ${(bb*100).toFixed(0)}% — you statistically profit after ALL fees`};
-  if(bb>=1.0)return{action:"✅ BUY",       c:"#00ff87",bg:"rgba(0,255,135,.08)",reason:`Real cash expected to exceed pack price after all Courtyard fees`};
-  if(ev>=1.0)return{action:"⚡ CONSIDER",  c:"#ffd166",bg:"rgba(255,209,102,.08)",reason:`FMV positive but buyback is negative — only pull if keeping the card`};
-  if(ev>=0.9)return{action:"🕐 WAIT",      c:"#a0a8c0",bg:"rgba(160,168,192,.06)",reason:`Near breakeven — wait for better conditions before pulling`};
-  return          {action:"❌ SKIP",       c:"#ff3860",bg:"rgba(255,56,96,.07)", reason:`House has the edge. EV and buyback both below 1x right now`};
+  const bb=pack.buybackEv,ev=pack.evRatio;
+  if(bb>=1.2)return{action:"🔥 STRONG BUY",c:"#00ff87",bg:"rgba(0,255,135,.1)",reason:`Buyback EV ${(bb*100).toFixed(0)}% — you statistically profit after ALL fees`};
+  if(bb>=1.0)return{action:"✅ BUY",c:"#00ff87",bg:"rgba(0,255,135,.08)",reason:`Real cash expected to exceed pack price after all fees`};
+  if(ev>=1.0)return{action:"⚡ CONSIDER",c:"#ffd166",bg:"rgba(255,209,102,.08)",reason:`FMV positive but buyback is negative — only pull if keeping the card`};
+  if(ev>=0.9)return{action:"🕐 WAIT",c:"#a0a8c0",bg:"rgba(160,168,192,.06)",reason:`Near breakeven — wait for better conditions`};
+  return          {action:"❌ SKIP",c:"#ff3860",bg:"rgba(255,56,96,.07)",reason:`House has the edge. EV and buyback both below 1x right now`};
 }
 
 function evc(ev:number){return ev>=1.3?"#00ff87":ev>=1.0?"#4fd8a0":ev>=0.9?"#ffd166":"#ff3860";}
 
-// ─── Service Worker + Push Subscription helpers ───────────────────────────────
 function urlBase64ToUint8Array(b64:string){
   const b=b64.replace(/-/g,"+").replace(/_/g,"/");
   const raw=atob(b.padEnd(b.length+(4-b.length%4)%4,"="));
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
 function Spark({trend,color,w=64,h=20}:{trend:"up"|"down"|"flat";color:string;w?:number;h?:number}){
   const pts=trend==="up"?`0,${h} ${w*.3},${h*.65} ${w*.65},${h*.3} ${w},${h*.05}`:
             trend==="down"?`0,${h*.05} ${w*.3},${h*.3} ${w*.65},${h*.65} ${w},${h}`:
             `0,${h*.52} ${w*.28},${h*.38} ${w*.55},${h*.57} ${w*.8},${h*.44} ${w},${h*.5}`;
   const cy=trend==="up"?h*.05:trend==="down"?h:h*.5;
-  return(
-    <svg width={w} height={h} style={{display:"block",flexShrink:0}}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
-      <circle cx={w} cy={cy} r="2.5" fill={color}/>
-    </svg>
-  );
+  return(<svg width={w} height={h} style={{display:"block",flexShrink:0}}>
+    <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+    <circle cx={w} cy={cy} r="2.5" fill={color}/>
+  </svg>);
 }
 
-// ─── EV Chart ─────────────────────────────────────────────────────────────────
 function EVChart({pack}:{pack:Pack}){
   const color=evc(pack.evRatio);
   const N=24,base=pack.evRatio;
@@ -71,26 +64,24 @@ function EVChart({pack}:{pack:Pack}){
   });
   const mn=Math.min(...pts)*0.96,mx=Math.max(...pts)*1.04,rng=mx-mn||0.1;
   const W=290,H=88;
-  const tx=(i:number)=>i/(N-1)*W, ty=(v:number)=>H-(v-mn)/rng*H;
+  const tx=(i:number)=>i/(N-1)*W,ty=(v:number)=>H-(v-mn)/rng*H;
   const path=pts.map((v,i)=>`${i===0?"M":"L"}${tx(i).toFixed(1)},${ty(v).toFixed(1)}`).join(" ");
   const by=ty(1.0);
-  return(
-    <svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
-      <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={color} stopOpacity=".2"/><stop offset="100%" stopColor={color} stopOpacity=".01"/>
-      </linearGradient></defs>
-      {by>2&&by<H-2&&<line x1="0" y1={by} x2={W} y2={by} stroke="rgba(255,255,255,.12)" strokeWidth="1" strokeDasharray="3,3"/>}
-      <path d={path+` L${W},${H} L0,${H} Z`} fill="url(#cg)"/>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-      <circle cx={tx(N-1)} cy={ty(pts[N-1])} r="3" fill={color}/>
-      <text x="3" y="11" fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mx.toFixed(2)}x</text>
-      <text x="3" y={H-2} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mn.toFixed(2)}x</text>
-      {by>8&&by<H-8&&<text x={W-28} y={by-3} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">1.0x</text>}
-    </svg>
-  );
+  return(<svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor={color} stopOpacity=".2"/><stop offset="100%" stopColor={color} stopOpacity=".01"/>
+    </linearGradient></defs>
+    {by>2&&by<H-2&&<line x1="0" y1={by} x2={W} y2={by} stroke="rgba(255,255,255,.12)" strokeWidth="1" strokeDasharray="3,3"/>}
+    <path d={path+` L${W},${H} L0,${H} Z`} fill="url(#cg)"/>
+    <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+    <circle cx={tx(N-1)} cy={ty(pts[N-1])} r="3" fill={color}/>
+    <text x="3" y="11" fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mx.toFixed(2)}x</text>
+    <text x="3" y={H-2} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mn.toFixed(2)}x</text>
+    {by>8&&by<H-8&&<text x={W-28} y={by-3} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">1.0x</text>}
+  </svg>);
 }
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
+// ─── CSS ─────────────────────────────────────────────────────────────────────
 const CSS=`
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',system-ui,sans-serif}
@@ -123,14 +114,10 @@ body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',syst
 .pcard-top{padding:12px 12px 10px}
 .pcard-bot{border-top:1px solid #122038;padding:9px 12px;background:rgba(0,0,0,.15)}
 .pcard-stripe{position:absolute;top:0;left:0;right:0;height:2px}
-
-/* ALERT BELL */
-.bell{all:unset;cursor:pointer;width:28px;height:28px;border:1px solid #122038;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all .15s;background:transparent}
+.bell{all:unset;cursor:pointer;width:28px;height:28px;border:1px solid #122038;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all .15s}
 .bell:hover{border-color:#1e3a50;background:rgba(255,255,255,.03)}
 .bell.on{border-color:rgba(255,209,102,.4);background:rgba(255,209,102,.08);animation:ap 2s infinite}
 @keyframes ap{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.35)}70%{box-shadow:0 0 0 6px rgba(255,209,102,0)}}
-
-/* DETAIL PANEL */
 .detail-panel{width:0;flex-shrink:0;border-left:1px solid #122038;background:#07101f;display:flex;flex-direction:column;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1)}
 .detail-panel.open{width:330px}
 .dp-scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -145,30 +132,46 @@ body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',syst
 .fee-t tr.tot td{color:#c8dff0;font-weight:700;border:none;padding-top:7px}
 .dp-x{all:unset;cursor:pointer;color:#3a5068;width:22px;height:22px;border:1px solid #122038;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:color .15s}
 .dp-x:hover{color:#c8dff0}
-
-/* ALERT PANEL */
-.alert-panel{position:fixed;top:0;right:0;bottom:0;width:320px;background:#07101f;border-left:1px solid #122038;z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
-.alert-panel.open{transform:translateX(0)}
-.ap-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;opacity:0;pointer-events:none;transition:opacity .25s}
-.ap-overlay.open{opacity:1;pointer-events:all}
-.ap-pack{background:#0b1728;border:1px solid #122038;border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
-.ap-pack:hover{border-color:#1e3a50}
-.ap-pack.active{border-color:rgba(255,209,102,.35);background:rgba(255,209,102,.04)}
-.ap-toggle{width:36px;height:20px;border-radius:10px;border:1px solid #122038;background:#060d18;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
-.ap-toggle.on{background:rgba(255,209,102,.15);border-color:rgba(255,209,102,.4)}
-.ap-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#3a5068;transition:all .2s}
-.ap-toggle.on::after{left:18px;background:#ffd166}
-
-/* BUDGET / FEED */
+.feed-card{border:1px solid #122038;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;background:#07101f;transition:background .1s}
+.feed-card:hover{background:#0b1728}
 .b-btn{padding:5px 14px;border:1px solid #122038;border-radius:20px;font-size:11px;cursor:pointer;background:transparent;color:#3a5068;font-family:monospace;transition:all .15s;font-weight:700}
 .b-btn:hover{border-color:#1e3a50;color:#c8dff0}
 .b-btn.on{border-color:rgba(0,255,135,.3);color:#00ff87;background:rgba(0,255,135,.06)}
-.feed-card{border:1px solid #122038;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;background:#07101f;transition:background .1s}
-.feed-card:hover{background:#0b1728}
 
-/* NOTIFICATION TOAST */
-.toast{position:fixed;bottom:20px;right:20px;background:#0b1728;border:1px solid rgba(0,255,135,.3);border-radius:10px;padding:12px 16px;z-index:200;max-width:320px;animation:toastin .3s ease}
-@keyframes toastin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* TOGGLE SWITCH */
+.toggle-wrap{display:flex;align-items:center;gap:10px;cursor:pointer}
+.toggle{width:42px;height:24px;border-radius:12px;border:1px solid #122038;background:#060d18;position:relative;transition:all .2s;flex-shrink:0}
+.toggle.on{background:rgba(0,255,135,.15);border-color:rgba(0,255,135,.4)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#3a5068;transition:all .2s}
+.toggle.on::after{left:21px;background:#00ff87}
+.toggle.yellow.on{background:rgba(255,209,102,.15);border-color:rgba(255,209,102,.4)}
+.toggle.yellow.on::after{background:#ffd166}
+.toggle.red.on{background:rgba(255,56,96,.15);border-color:rgba(255,56,96,.4)}
+.toggle.red.on::after{background:#ff3860}
+
+/* ALERT TYPE CARDS */
+.atype-card{border:1px solid #122038;border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .15s;background:#0b1728}
+.atype-card:hover{border-color:#1e3a50}
+.atype-card.on-green{border-color:rgba(0,255,135,.3);background:rgba(0,255,135,.04)}
+.atype-card.on-blue{border-color:rgba(79,143,255,.3);background:rgba(79,143,255,.04)}
+.atype-card.on-red{border-color:rgba(255,56,96,.3);background:rgba(255,56,96,.04)}
+.atype-card.on-yellow{border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.04)}
+
+/* NOTIF PERMISSION BOX */
+.perm-box{border-radius:12px;padding:20px;text-align:center}
+.perm-btn{width:100%;padding:14px;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:monospace;transition:all .15s}
+.perm-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.perm-btn:active{transform:translateY(0)}
+
+/* PACK WATCH LIST */
+.watch-pack{border:1px solid #122038;border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
+.watch-pack:hover{border-color:#1e3a50;background:#0d1e35}
+.watch-pack.on{border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.04)}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#0b1728;border:1px solid rgba(0,255,135,.25);border-radius:10px;padding:12px 16px;pointer-events:all;max-width:300px;animation:toastin .25s ease}
+@keyframes toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .fi{animation:fi .18s ease both}
@@ -176,112 +179,223 @@ body{background:#060d18!important;color:#c8dff0;font-family:'Space Grotesk',syst
 .si{animation:si .2s ease both}
 `;
 
-// ─── Alert Panel Component ────────────────────────────────────────────────────
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({msg,type,onClose}:{msg:string;type:"ok"|"warn"|"err";onClose:()=>void}){
+  useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
+  const colors={ok:"#00ff87",warn:"#ffd166",err:"#ff3860"};
+  const icons={ok:"✅",warn:"⚠️",err:"❌"};
+  return(
+    <div className="toast" style={{borderColor:`${colors[type]}44`}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:16}}>{icons[type]}</span>
+        <div style={{flex:1,fontSize:11,color:"#c8dff0",lineHeight:1.5}}>{msg}</div>
+        <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",fontSize:14,paddingLeft:8}}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ALERTS PAGE ─────────────────────────────────────────────────────────────
+// ─── Alert Panel (slide-in from right) ──────────────────────────────────────
 function AlertPanel({
-  open, onClose, packs, alerts, onToggle, swStatus, onEnableNotifs
-}: {
+  open, onClose, packs, alerts, onToggle,
+  swStatus, onEnableNotifs, alertType, setAlertType, isSubscribed
+}:{
   open:boolean; onClose:()=>void; packs:Pack[]; alerts:Set<string>;
-  onToggle:(id:string)=>void; swStatus:string; onEnableNotifs:()=>Promise<void>;
-}) {
+  onToggle:(id:string)=>void; swStatus:string; onEnableNotifs:()=>Promise<boolean>;
+  alertType:string; setAlertType:(t:string)=>void; isSubscribed:boolean;
+}){
   const M={fontFamily:"monospace"} as React.CSSProperties;
-  const alertCount = alerts.size;
-  return (
+  const [enabling,setEnabling]=useState(false);
+  const [step,setStep]=useState<"type"|"packs">("type");
+
+  const handleEnable=async()=>{
+    setEnabling(true);
+    const ok=await onEnableNotifs();
+    setEnabling(false);
+    if(ok) setStep("type");
+  };
+
+  const TYPES=[
+    {id:"smart", icon:"🔥", label:"Smart Alerts", color:"#00ff87",
+     desc:"Only when buyback EV hits 1.2x+ — actual profit after ALL fees. Rare & valuable.",
+     example:"🔥 Basketball Pro STRONG BUY — 1.38x buyback · $69 cash",
+     badge:"RECOMMENDED", nopack:true},
+    {id:"market", icon:"📊", label:"Market Alerts", color:"#4f8fff",
+     desc:"Any pack goes +EV. Good for casual users — we watch everything.",
+     example:"📊 4 packs are +EV now! Best: Basketball Pro 1.47x",
+     badge:"NO SETUP", nopack:true},
+    {id:"pack", icon:"🔔", label:"Pack Alerts", color:"#ffd166",
+     desc:"Pick specific packs. Get notified when YOUR packs cross 1.0x EV.",
+     example:"⚡ Pokémon Starter is +EV! EV: 1.21x · Cash: $25.50",
+     badge:"CUSTOM", nopack:false},
+    {id:"all", icon:"⚡", label:"All Alerts", color:"#c8dff0",
+     desc:"Smart + Market + Pack alerts combined. Maximum coverage.",
+     example:"All of the above",
+     badge:"MAX", nopack:false},
+  ];
+
+  const selected=TYPES.find(t=>t.id===alertType)||TYPES[0];
+  const showPackStep=(alertType==="pack"||alertType==="all")&&step==="packs";
+
+  return(
     <>
-      <div className={`ap-overlay${open?" open":""}`} onClick={onClose}/>
-      <div className={`alert-panel${open?" open":""}`}>
+      {/* Overlay */}
+      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:99,opacity:open?1:0,pointerEvents:open?"all":"none",transition:"opacity .2s"}}/>
+
+      {/* Panel */}
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:340,background:"#07101f",borderLeft:"1px solid #122038",zIndex:100,display:"flex",flexDirection:"column",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .25s cubic-bezier(.4,0,.2,1)"}}>
+
         {/* Header */}
-        <div style={{padding:"14px 16px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div>
+        <div style={{padding:"13px 16px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <div style={{flex:1}}>
             <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>🔔 EV Alerts</div>
-            <div style={{fontSize:10,color:"#3a5068",marginTop:2}}>
-              {alertCount>0?`${alertCount} pack${alertCount>1?"s":""} being watched`:"No packs selected yet"}
+            <div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>
+              {isSubscribed?`Active · ${selected.label}`:"Set up alerts — free, no account needed"}
             </div>
           </div>
-          <button className="dp-x" onClick={onClose}>✕</button>
+          {showPackStep&&<button onClick={()=>setStep("type")} style={{all:"unset" as any,cursor:"pointer",fontSize:9,color:"#3a5068",padding:"3px 8px",border:"1px solid #122038",borderRadius:5,...M}}>← Back</button>}
+          <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",width:22,height:22,border:"1px solid #122038",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>✕</button>
         </div>
 
-        {/* Status banner */}
-        <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-          {swStatus==="granted" ? (
-            <div style={{background:"rgba(0,255,135,.06)",border:"1px solid rgba(0,255,135,.2)",borderRadius:8,padding:"8px 12px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span className="ld"/>
-                <div>
-                  <div style={{fontWeight:700,fontSize:11,color:"#00ff87"}}>Alerts Active — Works Even When Browser is Closed</div>
-                  <div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>Server checks Courtyard every 60s · you get notified instantly</div>
-                </div>
+        {/* Notification status */}
+        {swStatus!=="granted"&&(
+          <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
+            {swStatus==="denied"?(
+              <div style={{background:"rgba(255,56,96,.06)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"9px 11px"}}>
+                <div style={{fontWeight:700,fontSize:11,color:"#ff3860",marginBottom:4}}>⛔ Notifications Blocked</div>
+                <div style={{fontSize:9,color:"#3a5068",lineHeight:1.5}}>Click the 🔒 lock in the address bar → Notifications → Allow → refresh the page.</div>
               </div>
-            </div>
-          ) : swStatus==="denied" ? (
-            <div style={{background:"rgba(255,56,96,.06)",border:"1px solid rgba(255,56,96,.2)",borderRadius:8,padding:"8px 12px"}}>
-              <div style={{fontWeight:700,fontSize:11,color:"#ff3860"}}>⛔ Notifications Blocked</div>
-              <div style={{fontSize:10,color:"#3a5068",marginTop:3}}>Go to browser Settings → Notifications → allow evault-kappa.vercel.app</div>
-            </div>
-          ) : (
-            <div style={{background:"rgba(255,209,102,.05)",border:"1px solid rgba(255,209,102,.2)",borderRadius:8,padding:"8px 12px"}}>
-              <div style={{fontWeight:700,fontSize:11,color:"#ffd166",marginBottom:6}}>⚡ Enable Push Notifications</div>
-              <div style={{fontSize:10,color:"#3a5068",marginBottom:8,lineHeight:1.5}}>
-                Get notified the moment any pack turns +EV — even when this tab is closed. Our server watches Courtyard 24/7.
+            ):(
+              <div style={{background:"rgba(255,209,102,.05)",border:"1px solid rgba(255,209,102,.2)",borderRadius:8,padding:"10px 12px"}}>
+                <div style={{fontWeight:700,fontSize:11,color:"#ffd166",marginBottom:5}}>Enable push notifications first</div>
+                <p style={{fontSize:9,color:"#3a5068",lineHeight:1.5,marginBottom:8}}>
+                  Your browser will show a one-time popup asking <strong style={{color:"#c8dff0"}}>"Allow notifications?"</strong> — click <strong style={{color:"#00ff87"}}>Allow</strong>. After that, alerts fire even when this tab is closed.
+                </p>
+                <button onClick={handleEnable} disabled={enabling}
+                  style={{width:"100%",padding:"9px",background:enabling?"#1a2a3a":"#ffd166",color:"#000",border:"none",borderRadius:7,fontWeight:800,fontSize:12,cursor:"pointer",...M}}>
+                  {enabling?"Requesting...":"🔔 Enable Notifications →"}
+                </button>
               </div>
-              <button onClick={onEnableNotifs}
-                style={{width:"100%",padding:"8px",background:"#ffd166",color:"#000",border:"none",borderRadius:6,fontWeight:800,fontSize:12,cursor:"pointer",...M}}>
-                Allow Notifications →
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* How it works */}
-        <div style={{padding:"10px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
-          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:6}}>HOW IT WORKS</div>
-          <div style={{display:"flex",flexDirection:"column" as const,gap:5}}>
-            {[
-              ["1","Toggle the 🔕 bell on any pack card"],
-              ["2","Our server checks Courtyard every 60s"],
-              ["3","Pack hits +EV? You get a push notification"],
-              ["4","Works even when your browser is closed"],
-            ].map(([n,t])=>(
-              <div key={n} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{width:16,height:16,borderRadius:"50%",background:"rgba(0,255,135,.1)",border:"1px solid rgba(0,255,135,.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:"#00ff87",flexShrink:0,...M}}>{n}</span>
-                <span style={{fontSize:10,color:"#3a5068",lineHeight:1.4}}>{t}</span>
-              </div>
-            ))}
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Pack list */}
-        <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
-          <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>
-            SELECT PACKS TO WATCH ({alertCount}/{packs.length})
+        {/* Active status */}
+        {swStatus==="granted"&&isSubscribed&&!showPackStep&&(
+          <div style={{padding:"8px 14px",borderBottom:"1px solid #122038",flexShrink:0}}>
+            <div style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.15)",borderRadius:7,padding:"7px 10px",display:"flex",alignItems:"center",gap:8}}>
+              <span className="ld" style={{width:5,height:5}}/>
+              <span style={{fontSize:10,color:"#00ff87",fontWeight:700}}>Alerts Active</span>
+              <span style={{fontSize:9,color:"#3a5068",...M}}>Server checks every 60s · works when closed</span>
+            </div>
           </div>
-          {packs.map(p=>{
-            const isOn=alerts.has(p.id);
-            const evC2=evc(p.evRatio);
-            const sg=sig(p.evRatio);
-            const d=dec(p);
-            return(
-              <div key={p.id} className={`ap-pack${isOn?" active":""}`} onClick={()=>onToggle(p.id)}>
-                <img src={packImg(p.id)} alt="" style={{width:32,height:44,objectFit:"contain",flexShrink:0}}
-                  onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:12,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3,flexWrap:"wrap" as const}}>
-                    <span style={{fontWeight:800,fontSize:11,color:evC2,...M}}>{$x(p.evRatio)}</span>
-                    <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,fontSize:7}}>{sg.label}</span>
+        )}
+
+        {/* STEP: Type selector */}
+        {!showPackStep&&(
+          <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>CHOOSE YOUR ALERT TYPE</div>
+
+            {TYPES.map(t=>{
+              const active=alertType===t.id;
+              return(
+                <div key={t.id} onClick={()=>setAlertType(t.id)}
+                  style={{border:`1px solid ${active?t.color+"55":"#122038"}`,borderRadius:9,padding:"11px 12px",cursor:"pointer",background:active?`${t.color}08`:"#0b1728",transition:"all .15s"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:6}}>
+                    <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:800,fontSize:12,color:active?t.color:"#fff"}}>{t.label}</div>
+                    </div>
+                    <span style={{fontSize:7,fontWeight:800,color:t.color,background:`${t.color}15`,padding:"2px 6px",borderRadius:3,border:`1px solid ${t.color}33`,...M}}>{t.badge}</span>
+                    <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${active?t.color:"#3a5068"}`,background:active?t.color:"transparent",flexShrink:0}}/>
                   </div>
-                  <div style={{fontSize:9,color:d.c,marginTop:2,...M,opacity:.9}}>{d.action}</div>
+                  <div style={{fontSize:10,color:"#3a5068",lineHeight:1.4,marginBottom:active?6:0}}>{t.desc}</div>
+                  {active&&(
+                    <div style={{fontSize:9,color:t.color,opacity:.7,fontStyle:"italic",borderTop:`1px solid ${t.color}22`,paddingTop:5,lineHeight:1.4,...M}}>
+                      e.g. "{t.example}"
+                    </div>
+                  )}
                 </div>
-                {/* Toggle */}
-                <div className={`ap-toggle${isOn?" on":""}`} onClick={(e)=>{e.stopPropagation();onToggle(p.id);}}/>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+
+            {/* Pack selection shortcut */}
+            {(alertType==="pack"||alertType==="all")&&(
+              <button onClick={()=>setStep("packs")}
+                style={{all:"unset" as any,cursor:"pointer",marginTop:4,padding:"10px 12px",background:"#0b1728",border:"1px solid rgba(255,209,102,.25)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:11,color:"#ffd166"}}>Select Packs to Watch</div>
+                  <div style={{fontSize:9,color:"#3a5068",marginTop:2}}>
+                    {alerts.size>0?`${alerts.size} pack${alerts.size!==1?"s":""} selected`:"No packs selected yet — tap to choose"}
+                  </div>
+                </div>
+                <span style={{color:"#ffd166",fontSize:14}}>→</span>
+              </button>
+            )}
+
+            {/* How it works */}
+            <div style={{marginTop:6,padding:"10px 12px",background:"#060d18",border:"1px solid #122038",borderRadius:8}}>
+              <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:7}}>HOW IT WORKS</div>
+              {[
+                ["🌐","Enable once","Browser saves your subscription to our server"],
+                ["⏱️","Every 60s","Server fetches live Courtyard data automatically"],
+                ["📐","EV calculated","Checks every pack against your alert settings"],
+                ["📲","You get notified","Push to your phone/laptop even if browser is closed"],
+              ].map(([ico,t,s])=>(
+                <div key={t} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
+                  <span style={{fontSize:12,flexShrink:0}}>{ico}</span>
+                  <div>
+                    <span style={{fontSize:10,fontWeight:700,color:"#c8dff0"}}>{t} — </span>
+                    <span style={{fontSize:9,color:"#3a5068"}}>{s}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{fontSize:8,color:"#2a4060",textAlign:"center" as const,...M,lineHeight:1.6}}>
+              Free forever · No account · 1-click to turn off
+            </div>
+          </div>
+        )}
+
+        {/* STEP: Pack selector */}
+        {showPackStep&&(
+          <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:4}}>
+              SELECT PACKS TO WATCH ({alerts.size} selected)
+            </div>
+            {packs.map(p=>{
+              const isOn=alerts.has(p.id);
+              const evColor2=evc(p.evRatio),sg=sig(p.evRatio),d=dec(p);
+              return(
+                <div key={p.id} onClick={()=>onToggle(p.id)}
+                  style={{border:`1px solid ${isOn?"rgba(255,209,102,.3)":"#122038"}`,borderRadius:9,padding:"10px 11px",cursor:"pointer",background:isOn?"rgba(255,209,102,.04)":"#0b1728",display:"flex",alignItems:"center",gap:9,transition:"all .15s"}}>
+                  <img src={packImg(p.id)} alt="" style={{width:30,height:42,objectFit:"contain",flexShrink:0}}
+                    onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:11,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,marginBottom:3}}>{p.name}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap" as const}}>
+                      <span style={{fontWeight:800,fontSize:10,color:evColor2,...M}}>{$x(p.evRatio)}</span>
+                      <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,fontSize:7}}>{sg.label}</span>
+                    </div>
+                    <div style={{fontSize:9,color:d.c,marginTop:2,opacity:.85,...M}}>{d.action}</div>
+                  </div>
+                  {/* Toggle */}
+                  <div style={{width:38,height:22,borderRadius:11,border:`1px solid ${isOn?"rgba(255,209,102,.4)":"#122038"}`,background:isOn?"rgba(255,209,102,.15)":"#060d18",position:"relative",flexShrink:0,transition:"all .2s"}}
+                    onClick={(e)=>{e.stopPropagation();onToggle(p.id);}}>
+                    <div style={{position:"absolute",top:3,left:isOn?19:3,width:14,height:14,borderRadius:"50%",background:isOn?"#ffd166":"#3a5068",transition:"all .2s"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Footer */}
-        <div style={{padding:"10px 14px",borderTop:"1px solid #122038",flexShrink:0}}>
-          <div style={{fontSize:9,color:"#3a5068",...M,textAlign:"center" as const,lineHeight:1.6}}>
-            Alerts fire once per hour per pack. Free, no account needed.
+        <div style={{padding:"8px 14px",borderTop:"1px solid #122038",flexShrink:0}}>
+          <div style={{fontSize:8,color:"#2a4060",textAlign:"center" as const,...M}}>
+            Alerts: once/hr per pack · No spam · Free
           </div>
         </div>
       </div>
@@ -289,128 +403,127 @@ function AlertPanel({
   );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function Toast({msg,onClose}:{msg:string;onClose:()=>void}){
-  useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
-  return(
-    <div className="toast">
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:18}}>⚡</span>
-        <div>
-          <div style={{fontWeight:700,fontSize:12,color:"#00ff87",marginBottom:2}}>PackPulse</div>
-          <div style={{fontSize:11,color:"#c8dff0"}}>{msg}</div>
-        </div>
-        <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",marginLeft:8,fontSize:14}}>✕</button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard() {
+function Dashboard(){
   const {data,isLoading,refetch}=useCourtyardData();
-  const [tab,setTab]         =useState("all");
-  const [view,setView]        =useState<"packs"|"feed"|"budget">("packs");
-  const [sort,setSort]        =useState<"ev"|"bb"|"decision"|"wr"|"price">("ev");
-  const [flt,setFlt]          =useState<"all"|"pos"|"neg">("all");
-  const [sel,setSel]          =useState<Pack|null>(null);
-  const [budget,setBudget]    =useState<number|null>(null);
+  const [tab,setTab]          =useState("all");
+  const [view,setView]         =useState<"packs"|"feed"|"budget">("packs");
   const [alertsOpen,setAlertsOpen]=useState(false);
-  const [cd,setCd]            =useState(60);
-  const [toast,setToast]      =useState<string|null>(null);
+  const [sort,setSort]         =useState<"ev"|"bb"|"decision"|"wr"|"price">("ev");
+  const [flt,setFlt]           =useState<"all"|"pos"|"neg">("all");
+  const [sel,setSel]           =useState<Pack|null>(null);
+  const [budget,setBudget]     =useState<number|null>(null);
+  const [cd,sCd]               =useState(60);
+  const [toasts,setToasts]     =useState<{id:number;msg:string;type:"ok"|"warn"|"err"}[]>([]);
+  const toastId                =useRef(0);
   const M={fontFamily:"monospace"} as React.CSSProperties;
 
   // Alert state
   const [alerts,setAlerts]          =useState<Set<string>>(new Set());
+  const [alertType,setAlertTypeRaw] =useState("smart");
   const [swStatus,setSwStatus]      =useState<"unknown"|"granted"|"denied"|"unsupported">("unknown");
   const [pushSub,setPushSub]        =useState<PushSubscription|null>(null);
+  const [isSubscribed,setIsSubscribed]=useState(false);
   const swRegistered                 =useRef(false);
 
-  // ── Register service worker ──
+  const addToast=(msg:string,type:"ok"|"warn"|"err"="ok")=>{
+    const id=++toastId.current;
+    setToasts(t=>[...t,{id,msg,type}]);
+  };
+  const removeToast=(id:number)=>setToasts(t=>t.filter(x=>x.id!==id));
+
+  // Register service worker
   useEffect(()=>{
     if(swRegistered.current) return;
     swRegistered.current=true;
-    if(!("serviceWorker" in navigator)||!("PushManager" in window)){
-      setSwStatus("unsupported"); return;
-    }
+    if(!("serviceWorker" in navigator)||!("PushManager" in window)){setSwStatus("unsupported");return;}
     navigator.serviceWorker.register("/sw.js").then(reg=>{
-      console.log("SW registered", reg.scope);
-      setSwStatus(Notification.permission==="granted"?"granted":Notification.permission==="denied"?"denied":"unknown");
-      // Check if already subscribed
+      const p=Notification.permission;
+      setSwStatus(p==="granted"?"granted":p==="denied"?"denied":"unknown");
       reg.pushManager.getSubscription().then(sub=>{
-        if(sub) setPushSub(sub);
+        if(sub){setPushSub(sub);setIsSubscribed(true);}
       });
-    }).catch(err=>{
-      console.error("SW registration failed:", err);
-    });
+    }).catch(()=>{});
   },[]);
 
-  // ── Enable notifications ──
-  const enableNotifications=useCallback(async()=>{
+  // Enable notifications — smooth flow
+  const enableNotifications=useCallback(async():Promise<boolean>=>{
+    if(!("serviceWorker" in navigator)){addToast("Your browser doesn't support push notifications","err");return false;}
     try{
-      if(!("serviceWorker" in navigator)){setToast("Your browser doesn't support push notifications");return;}
       const perm=await Notification.requestPermission();
-      if(perm!=="granted"){setSwStatus("denied");setToast("Please allow notifications in browser settings");return;}
+      if(perm!=="granted"){
+        setSwStatus("denied");
+        addToast("Click Allow in the browser popup to enable notifications","warn");
+        return false;
+      }
       setSwStatus("granted");
       const reg=await navigator.serviceWorker.ready;
-      const existing=await reg.pushManager.getSubscription();
-      if(existing){setPushSub(existing);return;}
-      const sub=await reg.pushManager.subscribe({
-        userVisibleOnly:true,
-        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
+      let sub=await reg.pushManager.getSubscription();
+      if(!sub){
+        sub=await reg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
       setPushSub(sub);
-      setToast("✅ Notifications enabled! Select packs to watch below.");
-    }catch(err:any){
-      setToast(`Failed to enable notifications: ${err.message}`);
+      setIsSubscribed(true);
+      addToast("✅ Notifications enabled! Choose your alert type below","ok");
+      return true;
+    }catch(e:any){
+      addToast(`Failed: ${e.message}`,"err");
+      return false;
     }
   },[]);
 
-  // ── Toggle pack alert ──
-  const toggleAlert=useCallback(async(packId:string)=>{
-    if(swStatus!=="granted"){
-      await enableNotifications();
-      if(Notification.permission!=="granted") return;
-    }
-    const next=new Set(alerts);
-    if(next.has(packId)) next.delete(packId); else next.add(packId);
-    setAlerts(next);
-
-    // Save to Supabase via /api/subscribe
-    const sub=pushSub||(await (async()=>{
-      try{
-        const reg=await navigator.serviceWorker.ready;
-        return await reg.pushManager.getSubscription();
-      }catch{return null;}
-    })());
-    if(!sub){setToast("Please enable notifications first");return;}
-    setPushSub(sub);
-
-    const packIdsArr=Array.from(next);
+  // Save subscription to Supabase
+  const saveSubscription=useCallback(async(sub:PushSubscription,packIds:string[],type:string)=>{
     try{
-      const r=await fetch("/api/subscribe",{
+      const p256dh=btoa(String.fromCharCode(...new Uint8Array(sub.getKey("p256dh")!)));
+      const auth=btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")!)));
+      await fetch("/api/subscribe",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          subscription:{endpoint:sub.endpoint,keys:{p256dh:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("p256dh")!))),auth:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")!)))}},
-          packIds:packIdsArr,
-          alertOnEv:true,
-          alertOnBuyback:true,
-          evThreshold:1.0,
+          subscription:{endpoint:sub.endpoint,keys:{p256dh,auth}},
+          packIds,alertOnEv:true,alertOnBuyback:true,evThreshold:1.0,alertType:type,
         }),
       });
-      if(r.ok){
-        const packName=data?.packs.find(p=>p.id===packId)?.name;
-        setToast(next.has(packId)?`🔔 Alert ON for ${packName} — you'll be notified when it's +EV`:`🔕 Alert OFF for ${packName}`);
-      }
-    }catch(err:any){
-      setToast(`Subscription error: ${err.message}`);
+    }catch{}
+  },[]);
+
+  // Toggle per-pack alert (from card bell)
+  const toggleAlert=useCallback(async(packId:string)=>{
+    let sub=pushSub;
+    if(swStatus!=="granted"||!sub){
+      const ok=await enableNotifications();
+      if(!ok) return;
+      sub=await (async()=>{
+        try{const reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription();}
+        catch{return null;}
+      })();
+      if(!sub) return;
     }
-  },[alerts,swStatus,pushSub,data,enableNotifications]);
+    const next=new Set(alerts);
+    next.has(packId)?next.delete(packId):next.add(packId);
+    setAlerts(next);
+    const packName=data?.packs.find(p=>p.id===packId)?.name??"pack";
+    addToast(next.has(packId)?`🔔 Alert ON for ${packName}`:`🔕 Alert removed for ${packName}`,"ok");
+    await saveSubscription(sub,Array.from(next),alertType);
+  },[alerts,swStatus,pushSub,data,alertType,enableNotifications,saveSubscription]);
+
+  // When alertType changes, re-save
+  const setAlertType=useCallback(async(type:string)=>{
+    setAlertTypeRaw(type);
+    if(pushSub&&isSubscribed){
+      await saveSubscription(pushSub,Array.from(alerts),type);
+      addToast(`Alert type set to: ${type==="smart"?"🔥 Smart":type==="market"?"📊 Market":type==="pack"?"🔔 Pack":"⚡ All"}`,"ok");
+    }
+  },[pushSub,isSubscribed,alerts,saveSubscription]);
 
   // Countdown
   useEffect(()=>{
-    const t=setInterval(()=>setCd(c=>{if(c<=1){refetch();return 60;}return c-1;}),1000);
+    const t=setInterval(()=>sCd(c=>{if(c<=1){refetch();return 60;}return c-1;}),1000);
     return()=>clearInterval(t);
   },[refetch]);
 
@@ -419,20 +532,25 @@ function Dashboard() {
   const rows:Pack[]=data?[...data.packs].filter(p=>tab==="all"||p.category===tab).filter(p=>flt==="pos"?p.evRatio>=1:flt==="neg"?p.evRatio<1:true).sort((a,b)=>sort==="ev"?b.evRatio-a.evRatio:sort==="bb"?b.buybackEv-a.buybackEv:sort==="decision"?decScore(b)-decScore(a):sort==="wr"?b.winRate-a.winRate:a.price-b.price):[];
   const best=data?.packs[0];
   const budgetPacks=(b:number)=>data?.packs.filter(p=>p.price<=b).sort((a,c)=>decScore(c)-decScore(a)).slice(0,3)??[];
+  const alertCount=alertType==="pack"||alertType==="all"?alerts.size:alertType==="smart"||alertType==="market"?1:0;
 
-  return (
+  return(
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"#060d18",color:"#c8dff0"}}>
       <style>{CSS}</style>
 
-      {/* ALERT PANEL + OVERLAY */}
+      {/* TOASTS */}
+      <div className="toast-wrap">
+        {toasts.map(t=><Toast key={t.id} msg={t.msg} type={t.type} onClose={()=>removeToast(t.id)}/>)}
+      </div>
+
+      {/* ALERTS PANEL */}
       <AlertPanel
         open={alertsOpen} onClose={()=>setAlertsOpen(false)}
         packs={data?.packs??[]} alerts={alerts} onToggle={toggleAlert}
         swStatus={swStatus} onEnableNotifs={enableNotifications}
+        alertType={alertType} setAlertType={setAlertType}
+        isSubscribed={isSubscribed}
       />
-
-      {/* TOAST */}
-      {toast&&<Toast msg={toast} onClose={()=>setToast(null)}/>}
 
       {/* TICKER */}
       {data&&data.recentPulls.length>0&&(
@@ -442,14 +560,12 @@ function Dashboard() {
             <div className="ticker-track">
               {[...data.recentPulls,...data.recentPulls].map((p,i)=>{
                 const win=p.fmv>p.packPrice;
-                return(
-                  <div key={`${p.id}-${i}`} className="ticker-item">
-                    <span style={{color:"#3a5068",fontSize:9}}>@{p.user}</span>
-                    <span style={{color:"#c8dff0",fontWeight:600}}>{p.cardName.slice(0,20)}</span>
-                    <span style={{color:win?"#00ff87":"#ff3860",fontWeight:800}}>{$f(p.fmv)}</span>
-                    <span style={{color:win?"rgba(0,255,135,.5)":"rgba(255,56,96,.5)",fontSize:9}}>({win?"+":""}{$f(p.fmv-p.packPrice)})</span>
-                  </div>
-                );
+                return(<div key={`${p.id}-${i}`} className="ticker-item">
+                  <span style={{color:"#3a5068",fontSize:9}}>@{p.user}</span>
+                  <span style={{color:"#c8dff0",fontWeight:600}}>{p.cardName.slice(0,20)}</span>
+                  <span style={{color:win?"#00ff87":"#ff3860",fontWeight:800}}>{$f(p.fmv)}</span>
+                  <span style={{color:win?"rgba(0,255,135,.5)":"rgba(255,56,96,.5)",fontSize:9}}>({win?"+":""}{$f(p.fmv-p.packPrice)})</span>
+                </div>);
               })}
             </div>
           </div>
@@ -479,13 +595,10 @@ function Dashboard() {
             <div className="hstat-v" style={{color:s.c}}>{s.v}</div>
           </div>
         ))}
-
-        {/* ALERTS BUTTON */}
-        <button onClick={()=>setAlertsOpen(true)}
-          style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:alerts.size>0?"rgba(255,209,102,.08)":"transparent",border:`1px solid ${alerts.size>0?"rgba(255,209,102,.3)":"#122038"}`,borderRadius:7,cursor:"pointer",fontSize:11,color:alerts.size>0?"#ffd166":"#3a5068",fontWeight:700,...M,flexShrink:0}}>
-          {alerts.size>0?`🔔 ${alerts.size} Alert${alerts.size>1?"s":""}  Active`:"🔕 Set Alerts"}
+        <button onClick={()=>setAlertsOpen(true)} style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5,padding:"4px 12px",background:isSubscribed?"rgba(255,209,102,.06)":"transparent",border:`1px solid ${isSubscribed?"rgba(255,209,102,.3)":"#122038"}`,borderRadius:7,cursor:"pointer",fontSize:9,color:isSubscribed?"#ffd166":"#3a5068",fontWeight:700,...M,flexShrink:0}}>
+          {isSubscribed?"🔔 Alerts Active":"🔔 Set Alerts"}
         </button>
-        <button onClick={()=>refetch()} disabled={isLoading} style={{padding:"4px 11px",background:"transparent",border:"1px solid #122038",borderRadius:5,fontSize:8,color:"#3a5068",cursor:"pointer",...M}}>↻ Refresh</button>
+        <button onClick={()=>refetch()} disabled={isLoading} style={{marginLeft:"auto",padding:"4px 11px",background:"transparent",border:"1px solid #122038",borderRadius:5,fontSize:8,color:"#3a5068",cursor:"pointer",...M}}>↻ Refresh</button>
       </nav>
 
       {/* BODY */}
@@ -494,12 +607,19 @@ function Dashboard() {
         {/* Sidebar */}
         <aside style={{width:178,flexShrink:0,borderRight:"1px solid #122038",background:"#07101f",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"9px 10px 3px",fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>WORKSPACE</div>
-          {([["packs","⚡","EV Terminal"],["budget","💰","Budget Advisor"],["feed","📋","Pull Feed"]] as [string,string,string][]).map(([v,ico,lbl])=>(
+          {([
+            ["packs","⚡","EV Terminal",""],
+            ["budget","💰","Budget Advisor",""],
+            ["feed","📋","Pull Feed",""],
+            ["alerts","🔔","EV Alerts", isSubscribed?"LIVE":swStatus==="granted"?"ON":""]  /* panel */,
+          ] as [string,string,string,string][]).map(([v,ico,lbl,badge])=>(
             <button key={v} className={`sb-btn${view===v?" on":""}`} onClick={()=>setView(v as any)}
-              style={{borderLeftColor:view===v?"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent"}}>
+              style={{borderLeftColor:view===v?v==="alerts"?"#ffd166":"#00ff87":"transparent",background:view===v?"rgba(255,255,255,.025)":"transparent"}}>
               {ico} {lbl}
+              {badge&&<span style={{marginLeft:"auto",fontSize:7,fontWeight:700,color:v==="alerts"?"#ffd166":"#00ff87",background:v==="alerts"?"rgba(255,209,102,.1)":"rgba(0,255,135,.08)",padding:"1px 4px",borderRadius:3,...M}}>{badge}</span>}
             </button>
           ))}
+
           <div style={{padding:"9px 10px 3px",marginTop:4,fontSize:7,color:"#3a5068",letterSpacing:1.5,...M}}>MARKETS</div>
           {cats.map(c=>{
             const color=c==="all"?"#00ff87":CAT_COLOR[c]??"#888";
@@ -507,7 +627,7 @@ function Dashboard() {
             const buyN=packs.filter(p=>dec(p).action.includes("BUY")).length;
             const active=tab===c;
             return(
-              <button key={c} className={`sb-btn${active?" on":""}`} onClick={()=>setTab(c)}
+              <button key={c} className={`sb-btn${active?" on":""}`} onClick={()=>{setTab(c);setView("packs");}}
                 style={{borderLeftColor:active?color:"transparent",background:active?"rgba(255,255,255,.025)":"transparent"}}>
                 <span style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0,display:"inline-block"}}/>
                 <span style={{flex:1}}>{c==="all"?"All Markets":c}</span>
@@ -522,12 +642,10 @@ function Dashboard() {
 
         {/* Main */}
         <main style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          {isLoading&&(
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
-              <div style={{fontSize:32}}>⚡</div>
-              <div style={{fontSize:13,fontWeight:700,color:"#3a5068"}}>Loading live Courtyard data...</div>
-            </div>
-          )}
+          {isLoading&&(<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
+            <div style={{fontSize:32}}>⚡</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#3a5068"}}>Loading live Courtyard data...</div>
+          </div>)}
 
           {/* ═══ EV TERMINAL ═══ */}
           {data&&view==="packs"&&(
@@ -546,7 +664,7 @@ function Dashboard() {
                     {l:"+EV PACKS",v:`${data.posEV}/${data.packs.length}`,s:"above break-even",vc:"#00ff87"},
                     {l:"BEST EV NOW",v:$x(data.bestPack?.evRatio??0),s:data.bestPack?.name??"—",vc:"#00ff87"},
                     {l:"PULLS TRACKED",v:`${data.totalPulls}`,s:data.isLive?"live data":"sample",vc:"#fff"},
-                    {l:"MARKET AVG EV",v:$x(data.avgEV),s:data.avgEV>=1?"Market is healthy":"Below EV",vc:data.avgEV>=1?"#00ff87":"#ff3860"},
+                    {l:"MARKET AVG EV",v:$x(data.avgEV),s:data.avgEV>=1?"Market healthy":"Below EV",vc:data.avgEV>=1?"#00ff87":"#ff3860"},
                   ].map(s=>(
                     <div key={s.l} style={{background:"#0b1728",border:"1px solid #122038",borderRadius:8,padding:"8px 11px"}}>
                       <div style={{fontSize:7,color:"#3a5068",letterSpacing:1.2,...M,marginBottom:3}}>{s.l}</div>
@@ -598,12 +716,11 @@ function Dashboard() {
               <div style={{flex:1,overflowY:"auto"}}>
                 <div className="pack-grid">
                   {rows.map((pack,idx)=>{
-                    const sg=sig(pack.evRatio), d=dec(pack);
+                    const sg=sig(pack.evRatio),d=dec(pack);
                     const catC=CAT_COLOR[pack.category]??"#888";
                     const evColor2=evc(pack.evRatio);
                     const bbC=pack.buybackEv>=1?"#00ff87":"#ff3860";
-                    const isSel=sel?.id===pack.id;
-                    const hasAlert=alerts.has(pack.id);
+                    const isSel=sel?.id===pack.id,hasAlert=alerts.has(pack.id);
                     return(
                       <div key={pack.id} className={`pcard fi${isSel?" sel":""}`} onClick={()=>setSel(isSel?null:pack)}>
                         <div className="pcard-stripe" style={{background:evColor2}}/>
@@ -621,15 +738,12 @@ function Dashboard() {
                               <div style={{fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.2,marginBottom:2}}>{pack.name}</div>
                               <div style={{fontSize:10,color:"#3a5068"}}>${pack.price}.00 · {pack.totalPulls} pulls</div>
                             </div>
-                            {/* Alert bell */}
                             <button className={`bell${hasAlert?" on":""}`}
                               onClick={(e)=>{e.stopPropagation();toggleAlert(pack.id);}}
-                              title={hasAlert?"Alert ON — click to turn off":"Set alert for this pack"}>
+                              title={hasAlert?"Alert ON":"Set alert"}>
                               {hasAlert?"🔔":"🔕"}
                             </button>
                           </div>
-
-                          {/* EV tiles */}
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
                             <div style={{background:"#060d18",borderRadius:6,padding:"7px 9px",border:`1px solid ${pack.evRatio>=1?"rgba(0,255,135,.15)":"rgba(255,56,96,.1)"}`}}>
                               <div style={{fontSize:7,color:"#3a5068",...M,marginBottom:2}}>EV RATIO</div>
@@ -642,8 +756,6 @@ function Dashboard() {
                               <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>≈{$f(pack.avgFmv*0.846)} cash</div>
                             </div>
                           </div>
-
-                          {/* Cal EV + Win rate */}
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                             <div>
                               <div style={{fontSize:7,color:"#3a5068",...M,marginBottom:2}}>CAL. EV</div>
@@ -657,8 +769,6 @@ function Dashboard() {
                             </div>
                           </div>
                         </div>
-
-                        {/* Bottom */}
                         <div className="pcard-bot">
                           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                             <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd}}>{sg.label}</span>
@@ -688,7 +798,7 @@ function Dashboard() {
           {data&&view==="budget"&&(
             <div style={{flex:1,overflowY:"auto",padding:16}}>
               <h2 style={{fontWeight:800,fontSize:20,color:"#fff",marginBottom:6}}>💰 Budget Advisor</h2>
-              <p style={{fontSize:12,color:"#3a5068",lineHeight:1.6,maxWidth:560,marginBottom:16}}>Tell us your budget. We find the best pack ranked by real buyback EV — the actual cash you pocket after all fees.</p>
+              <p style={{fontSize:12,color:"#3a5068",lineHeight:1.6,maxWidth:560,marginBottom:16}}>Tell us your budget. We find the best pack ranked by real buyback EV — actual cash after all fees.</p>
               <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap" as const}}>
                 {[10,25,50,100,200,500].map(b=>(
                   <button key={b} className={`b-btn${budget===b?" on":""}`} onClick={()=>setBudget(b)}>${b}</button>
@@ -698,7 +808,7 @@ function Dashboard() {
               {(budget?[budget]:[10,25,50,100]).map(b=>{
                 const recs=budgetPacks(b);
                 if(!recs.length) return null;
-                const top=recs[0], d=dec(top), sg=sig(top.evRatio);
+                const top=recs[0],d=dec(top),sg=sig(top.evRatio);
                 return(
                   <div key={b} style={{background:"#0b1728",border:"1px solid #122038",borderRadius:12,padding:16,marginBottom:12}}>
                     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
@@ -720,7 +830,7 @@ function Dashboard() {
                         </div>
                       ))}
                     </div>
-                    <div style={{fontSize:11,color:d.c,background:d.bg,border:`1px solid ${d.c}44`,borderRadius:7,padding:"7px 10px",marginBottom:10}}>
+                    <div style={{fontSize:11,color:d.c,background:d.bg,border:`1px solid ${d.c}44`,borderRadius:7,padding:"7px 10px",marginBottom:recs.length>1?10:0}}>
                       <strong>Why:</strong> {d.reason}
                     </div>
                     {recs.length>1&&(
@@ -777,9 +887,9 @@ function Dashboard() {
         {/* ═══ DETAIL PANEL ═══ */}
         <div className={sel?"detail-panel open":"detail-panel"}>
           {sel&&(()=>{
-            const p=sel, d=dec(p), sg=sig(p.evRatio);
-            const evColor2=evc(p.evRatio), bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
-            const trueCost=p.price*1.074, cashOut=p.avgFmv*0.846;
+            const p=sel,d=dec(p),sg=sig(p.evRatio);
+            const evColor2=evc(p.evRatio),bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
+            const trueCost=p.price*1.074,cashOut=p.avgFmv*0.846;
             const hasAlert=alerts.has(p.id);
             return(
               <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
@@ -789,46 +899,22 @@ function Dashboard() {
                     <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
                     <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.category} · ${p.price}/pack · {p.totalPulls} pulls</div>
                   </div>
-                  <button className={`bell${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)} title="Toggle alert">{hasAlert?"🔔":"🔕"}</button>
+                  <button className={`bell${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)}>{hasAlert?"🔔":"🔕"}</button>
                   <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
                 </div>
-
                 <div className="dp-scroll">
-                  {/* Decision */}
                   <div style={{background:d.bg,border:`1px solid ${d.c}44`,borderRadius:8,padding:"12px 13px"}}>
                     <div style={{fontSize:7,color:d.c,letterSpacing:1.5,...M,fontWeight:700,marginBottom:5}}>SHOULD YOU PULL?</div>
                     <div style={{fontWeight:800,fontSize:18,color:d.c,...M,marginBottom:5}}>{d.action}</div>
                     <div style={{fontSize:11,color:d.c,opacity:.85,lineHeight:1.5}}>{d.reason}</div>
                   </div>
-
-                  {/* Alert settings in panel */}
-                  <div className="dp-sec">
-                    <span className="dp-lbl">🔔 ALERTS FOR THIS PACK</span>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <div>
-                        <div style={{fontSize:12,color:"#c8dff0",fontWeight:700}}>Notify me when +EV</div>
-                        <div style={{fontSize:9,color:"#3a5068",marginTop:2}}>Push notification to your device, even when app is closed</div>
-                      </div>
-                      <button className={`ap-toggle${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)}/>
-                    </div>
-                    {hasAlert&&(
-                      <div style={{fontSize:10,color:"#ffd166",background:"rgba(255,209,102,.06)",border:"1px solid rgba(255,209,102,.2)",borderRadius:6,padding:"6px 9px"}}>
-                        🔔 Alert active — server checks every 60s. You'll be notified the moment this pack crosses 1.0x EV.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* EV Chart */}
                   <div className="dp-sec">
                     <span className="dp-lbl">EV RATIO TREND · 1m</span>
                     <EVChart pack={p}/>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M}}>
-                      <span>Earlier ←</span>
-                      <span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
+                      <span>Earlier ←</span><span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
                     </div>
                   </div>
-
-                  {/* Stats */}
                   <div className="dp-sec">
                     <span className="dp-lbl">EXPECTED VALUE</span>
                     <div className="dp-2">
@@ -849,8 +935,6 @@ function Dashboard() {
                     </div>
                     <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
                   </div>
-
-                  {/* Fee Breakdown */}
                   <div className="dp-sec">
                     <span className="dp-lbl">💡 FEE BREAKDOWN — EXCLUSIVE</span>
                     <table className="fee-t"><tbody>
@@ -862,7 +946,6 @@ function Dashboard() {
                       <tr className="tot"><td>💵 Cash in your hand</td><td style={{textAlign:"right" as const,color:bbC,fontSize:15}}>{$f(cashOut)}</td></tr>
                     </tbody></table>
                   </div>
-
                   <a href={`https://courtyard.io/vending-machine/${p.id}`} target="_blank" rel="noreferrer"
                     style={{display:"block",textAlign:"center" as const,padding:"12px",borderRadius:9,fontWeight:800,fontSize:14,textDecoration:"none",background:p.evRatio>=1?"#00ff87":"#0b1728",color:p.evRatio>=1?"#000":"#3a5068",border:p.evRatio>=1?"none":"1px solid #122038"}}>
                     {p.evRatio>=1?"🟢 Pull This Pack on Courtyard →":"View on Courtyard →"}
