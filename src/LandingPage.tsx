@@ -266,6 +266,61 @@ export default function LandingPage({ onEnterApp }:{ onEnterApp:()=>void }) {
         .foot-links a{font-size:13px;color:var(--muted);text-decoration:none;transition:color .2s}
         .foot-links a:hover{color:var(--text)}
         .foot-copy{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+        /* ── MOBILE RESPONSIVE ── */
+        @media(max-width:768px){
+          .nav{padding:14px 20px}
+          .nav-links{display:none}
+          .nav-btns .btn-ghost{display:none}
+
+          .hero{padding:100px 20px 48px}
+          .hero h1{font-size:42px;letter-spacing:-.03em}
+          .hero > p{font-size:15px}
+          .hero-ctas{gap:10px}
+          .btn-hero,.btn-outline{padding:12px 20px;font-size:13px}
+          .spots-line{font-size:10px;flex-wrap:wrap;gap:8px}
+          .mock-stats{grid-template-columns:repeat(2,1fr)}
+          .mock-cards{grid-template-columns:1fr}
+          .mock-cards .mock-card:last-child{display:none}
+
+          .stats-grid{grid-template-columns:repeat(2,1fr)}
+          .stat-cell:nth-child(2){border-right:none}
+          .stat-cell:nth-child(3){border-top:1px solid var(--border)}
+          .stat-cell:nth-child(4){border-top:1px solid var(--border)}
+
+          .sec{padding:56px 20px}
+          .sec-title{font-size:28px}
+
+          .excl-grid{grid-template-columns:1fr;gap:14px}
+          .feat-grid{grid-template-columns:1fr}
+          .steps{flex-direction:column;gap:32px}
+          .steps::before{display:none}
+          .step{padding:0}
+
+          .pack-metrics{gap:16px;flex-wrap:wrap}
+          .pack-grid{grid-template-columns:1fr 1fr}
+          .pack-grid .pg-cell:last-child{display:none}
+
+          .pulls-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+          .pulls-grid .pull-card:nth-child(n+5){display:none}
+
+          .pricing-wrap{max-width:100%}
+          .pricing-tiers{grid-template-columns:1fr;gap:14px}
+          .pi-grid{grid-template-columns:1fr}
+
+          .final-cta{margin:20px;padding:48px 24px}
+          .final-cta h2{font-size:28px}
+
+          footer{flex-direction:column;gap:16px;text-align:center;padding:24px 20px}
+          .foot-links{justify-content:center}
+        }
+
+        @media(max-width:480px){
+          .hero h1{font-size:34px}
+          .stats-grid{grid-template-columns:1fr 1fr;border-radius:10px}
+          .pulls-grid{grid-template-columns:1fr 1fr}
+          .pack-grid{grid-template-columns:1fr}
+        }
       `}</style>
 
       {/* ── NAV ── */}
@@ -576,16 +631,7 @@ export default function LandingPage({ onEnterApp }:{ onEnterApp:()=>void }) {
 
         <div className="pricing-wrap">
           <div className="pricing-tiers">
-            {/* Tier 1 — Sold Out */}
-            <div className="tier-card">
-              <div className="tier-label">Founding</div>
-              <div style={{fontFamily:"var(--disp)",fontSize:28,fontWeight:800,color:"var(--muted)",lineHeight:1,marginBottom:8}}>—</div>
-              <div className="tier-members">Members 1–?</div>
-              <div className="tier-desc">First tier. Only available once. Members who joined at the very beginning, locked in for life.</div>
-              <button className="tier-locked">Sold Out</button>
-            </div>
-
-            {/* Tier 2 — CURRENT */}
+            {/* Tier 1 — Early Access CURRENT */}
             <div className="tier-card active">
               <div className="tier-current">CURRENT TIER</div>
               <div className="tier-label active-label">Early Access</div>
@@ -612,7 +658,20 @@ export default function LandingPage({ onEnterApp }:{ onEnterApp:()=>void }) {
               <div className="tier-trust">✓ Cancel anytime &nbsp; ✓ Instant access<br/>✓ 7-day money back guarantee</div>
             </div>
 
-            {/* Tier 3 — Locked */}
+            {/* Tier 2 — Growth Locked */}
+            <div className="tier-card">
+              <div className="tier-label">Growth</div>
+              <div className="tier-price">
+                <span className="tier-dollar">$</span>
+                <span className="tier-amount" style={{color:"var(--muted)"}}>49</span>
+                <span className="tier-mo">/mo</span>
+              </div>
+              <div className="tier-members">Members 101–200</div>
+              <div className="tier-desc">Available after Early Access fills. Still below standard price — lock in before it rises again.</div>
+              <button className="tier-locked">Locked</button>
+            </div>
+
+            {/* Tier 3 — Standard Locked */}
             <div className="tier-card">
               <div className="tier-label">Standard</div>
               <div className="tier-price">
@@ -621,7 +680,7 @@ export default function LandingPage({ onEnterApp }:{ onEnterApp:()=>void }) {
                 <span className="tier-mo">/mo</span>
               </div>
               <div className="tier-members">Members 200+</div>
-              <div className="tier-desc">Full price tier. Available after Growth tier fills. Includes every Pro feature.</div>
+              <div className="tier-desc">Full price tier. Open after Growth fills. Includes every Pro feature — same product, higher price.</div>
               <button className="tier-locked">Locked</button>
             </div>
           </div>
