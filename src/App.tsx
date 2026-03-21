@@ -72,7 +72,7 @@ function UpgradeModal({onClose}:{onClose:()=>void}){
     if(!user) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/billing/checkout", {
+      const res = await fetch("/api/checkout", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
@@ -986,10 +986,22 @@ function Dashboard(){
                               <div style={{fontWeight:800,fontSize:20,color:evColor2,lineHeight:1,...M}}>{$x(pack.evRatio)}</div>
                               <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>{pack.evRatio>=1?"▲ above":"▼ below"} break-even</div>
                             </div>
-                            <div style={{background:"#060d18",borderRadius:6,padding:"7px 9px",border:`1px solid ${pack.buybackEv>=1?"rgba(255,209,102,.15)":"rgba(255,56,96,.1)"}`}}>
+                            <div onClick={(e)=>{if(!isPro){e.stopPropagation();setShowUpgrade(true);}}} style={{background:"#060d18",borderRadius:6,padding:"7px 9px",border:`1px solid ${isPro&&pack.buybackEv>=1?"rgba(255,209,102,.15)":"rgba(255,56,96,.1)"}`,position:"relative",cursor:isPro?"default":"pointer"}}>
                               <div style={{fontSize:7,color:"#ffd166",...M,marginBottom:2}}>BUYBACK EV ★</div>
-                              <div style={{fontWeight:800,fontSize:20,color:bbC,lineHeight:1,...M}}>{$x(pack.buybackEv)}</div>
-                              <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>≈{$f((pack.calEv??pack.avgFmv??0)*0.846)} cash</div>
+                              {isPro?(
+                                <>
+                                  <div style={{fontWeight:800,fontSize:20,color:bbC,lineHeight:1,...M}}>{$x(pack.buybackEv)}</div>
+                                  <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>≈{$f((pack.calEv??pack.avgFmv??0)*0.846)} cash</div>
+                                </>
+                              ):(
+                                <>
+                                  <div style={{fontWeight:800,fontSize:20,color:"#1e3a50",lineHeight:1,...M,filter:"blur(4px)",userSelect:"none" as const}}>0.000x</div>
+                                  <div style={{fontSize:8,color:"#1e3a50",marginTop:2,filter:"blur(3px)",userSelect:"none" as const}}>≈$00.00 cash</div>
+                                  <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:6}}>
+                                    <span style={{fontSize:9,color:"#ffd166",fontWeight:700,...M}}>🔒 PRO</span>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -1017,10 +1029,17 @@ function Dashboard(){
                               </a>
                             </div>
                           </div>
-                          <div style={{background:d.bg,border:`1px solid ${d.c}33`,borderRadius:6,padding:"6px 8px",display:"flex",alignItems:"center",gap:8}}>
-                            <span style={{fontWeight:800,fontSize:11,color:d.c,...M,flexShrink:0,whiteSpace:"nowrap" as const}}>{d.action}</span>
-                            <span style={{fontSize:9,color:d.c,opacity:.8,lineHeight:1.3}}>{d.reason.slice(0,52)}{d.reason.length>52?"…":""}</span>
-                          </div>
+                          {isPro?(
+                            <div style={{background:d.bg,border:`1px solid ${d.c}33`,borderRadius:6,padding:"6px 8px",display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontWeight:800,fontSize:11,color:d.c,...M,flexShrink:0,whiteSpace:"nowrap" as const}}>{d.action}</span>
+                              <span style={{fontSize:9,color:d.c,opacity:.8,lineHeight:1.3}}>{d.reason.slice(0,52)}{d.reason.length>52?"…":""}</span>
+                            </div>
+                          ):(
+                            <div onClick={(e)=>{e.stopPropagation();setShowUpgrade(true);}} style={{background:"rgba(0,255,135,.04)",border:"1px solid rgba(0,255,135,.15)",borderRadius:6,padding:"6px 8px",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                              <span style={{fontWeight:800,fontSize:11,color:"#00ff87",...M,flexShrink:0}}>⚡ UPGRADE</span>
+                              <span style={{fontSize:9,color:"#3a5068",lineHeight:1.3}}>Unlock BUY/WAIT/SKIP signals + Buyback EV</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1105,7 +1124,7 @@ function Dashboard(){
           {data&&view==="feed"&&(
             <div style={{flex:1,overflowY:"auto",padding:10,display:"flex",flexDirection:"column",gap:6}}>
               <div style={{padding:"4px 2px 6px",fontSize:11,color:"#3a5068"}}>{data.recentPulls.length} most recent pulls from Courtyard.io — live feed</div>
-              {(data.recentPulls as PullRecord[]).map(pull=>{
+              {(isPro ? data.recentPulls : data.recentPulls.slice(0,5)).map((pull,_pullIdx)=>{
                 const name=pull.buyer??pull.user??"anon";
                 const fmv=pull.fmv??0;
                 const packId=pull.packId??"";
@@ -1150,7 +1169,45 @@ function Dashboard(){
 
         {/* ═══ DETAIL PANEL ═══ */}
         <div className={sel?"detail-panel open":"detail-panel"}>
-          {sel&&(()=>{
+          {sel&&(!isPro?(
+          // Free users see upgrade prompt in detail panel
+          <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+            <div style={{padding:"11px 12px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0,background:"#060d18"}}>
+              <img src={packImg(sel.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{sel.name}</div>
+                <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>EV: {$x(sel.evRatio)} · ${sel.price}/pack</div>
+              </div>
+              <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
+            </div>
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:24,textAlign:"center" as const}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#fff"}}>Full Analysis is Pro</div>
+              <div style={{fontSize:12,color:"#3a5068",maxWidth:260,lineHeight:1.6}}>
+                Unlock Buyback EV, Decision Engine, EV history chart, fee breakdown, and push alerts for this pack.
+              </div>
+              {[
+                {e:"🎯",t:"Buyback EV",d:"Real cash after ALL fees"},
+                {e:"⚡",t:"BUY/WAIT/SKIP signal",d:"Data-backed decision"},
+                {e:"📈",t:"EV history chart",d:"See when EV shifted"},
+                {e:"💡",t:"Fee breakdown",d:"Every hidden cost exposed"},
+              ].map(f=>(
+                <div key={f.t} style={{display:"flex",gap:10,alignItems:"center",width:"100%",maxWidth:260,textAlign:"left" as const}}>
+                  <span style={{fontSize:16}}>{f.e}</span>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:11,color:"#fff"}}>{f.t}</div>
+                    <div style={{fontSize:9,color:"#3a5068"}}>{f.d}</div>
+                  </div>
+                  <span style={{marginLeft:"auto",color:"#00ff87",fontSize:12}}>✓</span>
+                </div>
+              ))}
+              <button onClick={()=>setShowUpgrade(true)}
+                style={{width:"100%",maxWidth:260,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
+                ⚡ Unlock for $19/mo →
+              </button>
+              <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime</div>
+            </div>
+          </div>
+        ):(()=>{
             const p=sel,d=dec(p),sg=sig(p.evRatio);
             const evColor2=evc(p.evRatio),bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
             const trueCost=p.price*1.074,cashOut=(safeN(p.calEv??p.avgFmv))*0.846;
