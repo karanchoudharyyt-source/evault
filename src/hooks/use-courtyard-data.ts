@@ -1,9 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Pack, PullRecord,
-  buildPacksFromAssets, buildFeedFromAssets,
-  PACKS as FALLBACK_PACKS, RECENT_PULLS as FALLBACK_PULLS,
-} from "../data/packs";
+import { Pack, PullRecord } from "../data/packs";
 
 export interface CourtyardData {
   packs: Pack[];
@@ -17,38 +13,43 @@ export interface CourtyardData {
   updatedAgo: string;
 }
 
-function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
-}
-
 async function fetchLive(): Promise<CourtyardData> {
   const res = await fetch("/api/pulls");
   if (!res.ok) throw new Error(`API ${res.status}`);
   const json = await res.json();
-  const assets: any[] = json.assets ?? [];
-  if (!assets.length) throw new Error("Empty response");
 
-  const packs = buildPacksFromAssets(assets);
-  const recentPulls = buildFeedFromAssets(assets);
-  if (!packs.length) throw new Error("No recognisable packs");
+  // New API returns { packs, recentPulls, totalPacks }
+  if (json.packs && Array.isArray(json.packs)) {
+    const packs: Pack[] = json.packs;
+    const recentPulls: PullRecord[] = (json.recentPulls ?? []).map((r: any) => ({
+      id:       r.id,
+      buyer:    r.buyer ?? 'anon',
+      packName: packs.find(p => p.id === r.packSlug)?.name ?? r.packSlug ?? '?',
+      packId:   r.packSlug ?? '',
+      fmv:      r.fmv ?? 0,
+      delta:    (r.fmv ?? 0) - (packs.find(p => p.id === r.packSlug)?.price ?? 50),
+      image:    r.image ?? '',
+      title:    r.title ?? '',
+      grade:    r.grade ?? '',
+      txTime:   r.txTime ?? new Date().toISOString(),
+    }));
 
-  const posEV = packs.filter(p => p.evRatio >= 1).length;
-  const avgEV = packs.reduce((s, p) => s + p.evRatio, 0) / packs.length;
-  const bestPack = packs.reduce((b, p) => p.evRatio > b.evRatio ? p : b, packs[0]);
-  const lastUpdated = new Date().toISOString();
+    if (!packs.length) throw new Error("No packs with data");
+    const posEV    = packs.filter(p => p.evRatio >= 1).length;
+    const avgEV    = packs.reduce((s, p) => s + p.evRatio, 0) / packs.length;
+    const bestPack = packs.reduce((b, p) => p.evRatio > b.evRatio ? p : b, packs[0]);
 
-  return { packs, recentPulls, totalPulls: assets.length, posEV, avgEV, bestPack, lastUpdated, isLive: true, updatedAgo: "just now" };
-}
+    return {
+      packs, recentPulls,
+      totalPulls: recentPulls.length,
+      posEV, avgEV, bestPack,
+      lastUpdated: new Date().toISOString(),
+      isLive: true,
+      updatedAgo: "just now",
+    };
+  }
 
-function fallback(): CourtyardData {
-  const packs = FALLBACK_PACKS;
-  const posEV = packs.filter(p => p.evRatio >= 1).length;
-  const avgEV = packs.reduce((s, p) => s + p.evRatio, 0) / packs.length;
-  const bestPack = packs.reduce((b, p) => p.evRatio > b.evRatio ? p : b, packs[0]);
-  return { packs, recentPulls: FALLBACK_PULLS, totalPulls: packs.reduce((s,p)=>s+p.totalPulls,0), posEV, avgEV, bestPack, lastUpdated: new Date().toISOString(), isLive: false, updatedAgo: "sample data" };
+  throw new Error("Unexpected API response shape");
 }
 
 export function useCourtyardData() {
@@ -56,10 +57,19 @@ export function useCourtyardData() {
     queryKey: ["packpulse-live"],
     queryFn: async () => {
       try { return await fetchLive(); }
-      catch (e) { console.warn("Live API failed, fallback:", e); return fallback(); }
+      catch (e) {
+        console.warn("Live API failed:", e);
+        // Return empty state — no hardcoded fallback data
+        return {
+          packs: [], recentPulls: [], totalPulls: 0,
+          posEV: 0, avgEV: 0, bestPack: null,
+          lastUpdated: new Date().toISOString(),
+          isLive: false, updatedAgo: "loading...",
+        };
+      }
     },
-    staleTime: 55 * 1000,          // fresh for 55s
-    refetchInterval: 60 * 1000,    // refetch every 60s
+    staleTime: 55 * 1000,
+    refetchInterval: 60 * 1000,
     refetchOnWindowFocus: true,
     retry: 1,
   });
