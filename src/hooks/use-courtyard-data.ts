@@ -68,8 +68,8 @@ export function useCourtyardData() {
         };
       }
     },
-    staleTime: 55 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 28 * 1000,
+    refetchInterval: 30 * 1000,
     refetchOnWindowFocus: true,
     retry: 1,
   });
