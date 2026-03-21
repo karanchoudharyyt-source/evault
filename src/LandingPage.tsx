@@ -250,7 +250,7 @@ export default function LandingPage({ onEnterApp }: { onEnterApp: () => void }) 
       {/* HERO */}
       <div className="lp-hero">
         <div className="hero-bg"/><div className="hero-grid"/>
-        <div className="hero-badge"><span className="live-dot"/><span style={{fontFamily:"var(--mono)",fontSize:10}}>5,137,564 pulls tracked and counting</span></div>
+        <div className="hero-badge"><span className="live-dot"/><span style={{fontFamily:"var(--mono)",fontSize:10}}>5,137,564 pulls tracked · 51 packs · Buyback EV exclusive</span></div>
         <h1>Stop buying packs<br/><span>blind.</span></h1>
         <p>Real-time expected value tracking for every Courtyard.io mystery pack. See the real math before you rip.</p>
         <div className="hero-cta-row">
@@ -310,11 +310,63 @@ export default function LandingPage({ onEnterApp }: { onEnterApp: () => void }) 
         </div>
       </div>
 
+      {/* WHAT MAKES US DIFFERENT */}
+      <section className="lp-section" style={{borderTop:"1px solid var(--border)",paddingBottom:0}}>
+        <span className="sec-label">Why PackPulse</span>
+        <h2 className="sec-title">We show you what others hide.</h2>
+        <p className="sec-sub" style={{marginBottom:48}}>Three things that make PackPulse the only tracker that actually helps you profit.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
+          {/* Differentiator 1 */}
+          <div style={{background:"rgba(0,255,136,.04)",border:"1px solid rgba(0,255,136,.2)",borderRadius:12,padding:"28px 24px",position:"relative" as const,overflow:"hidden"}}>
+            <div style={{position:"absolute" as const,top:0,left:0,right:0,height:2,background:"var(--green)"}}/>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--green)",letterSpacing:".18em",marginBottom:12,textTransform:"uppercase" as const}}>EXCLUSIVE</div>
+            <div style={{fontFamily:"var(--display)",fontSize:18,fontWeight:800,marginBottom:10}}>Buyback EV</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+              Every other tracker shows FMV. We show you the actual cash in your hand after Courtyard's 10% buyback cut + 6% processing fee. The number that actually matters.
+            </div>
+            <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--green)"}}>
+              FMV: $50.00 → Buyback: $42.30
+            </div>
+          </div>
+          {/* Differentiator 2 */}
+          <div style={{background:"rgba(255,204,68,.03)",border:"1px solid rgba(255,204,68,.2)",borderRadius:12,padding:"28px 24px",position:"relative" as const,overflow:"hidden"}}>
+            <div style={{position:"absolute" as const,top:0,left:0,right:0,height:2,background:"#ffcc44"}}/>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#ffcc44",letterSpacing:".18em",marginBottom:12,textTransform:"uppercase" as const}}>EXCLUSIVE</div>
+            <div style={{fontFamily:"var(--display)",fontSize:18,fontWeight:800,marginBottom:10}}>Decision Engine</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+              Every pack gets a data-backed signal. Not just a number — an action. When buyback EV crosses 1.2x you see STRONG BUY. Below 1.0x you see WAIT. Never guess again.
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap" as const}}>
+              {[{t:"🔥 STRONG BUY",c:"rgba(0,255,136,.15)",tc:"#00ff88"},{t:"✅ BUY",c:"rgba(0,255,136,.1)",tc:"#00ff88"},{t:"🕐 WAIT",c:"rgba(255,204,68,.1)",tc:"#ffcc44"},{t:"🚫 SKIP",c:"rgba(255,80,80,.1)",tc:"#ff5050"}].map(s=>(
+                <span key={s.t} style={{fontFamily:"var(--mono)",fontSize:9,background:s.c,color:s.tc,padding:"3px 8px",borderRadius:4,fontWeight:700}}>{s.t}</span>
+              ))}
+            </div>
+          </div>
+          {/* Differentiator 3 — Pricing */}
+          <div style={{background:"rgba(100,100,255,.03)",border:"1px solid rgba(100,100,255,.15)",borderRadius:12,padding:"28px 24px",position:"relative" as const,overflow:"hidden"}}>
+            <div style={{position:"absolute" as const,top:0,left:0,right:0,height:2,background:"#6464ff"}}/>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#6464ff",letterSpacing:".18em",marginBottom:12,textTransform:"uppercase" as const}}>FAIR PRICING</div>
+            <div style={{fontFamily:"var(--display)",fontSize:18,fontWeight:800,marginBottom:10}}>Early is always cheaper</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+              Price increases as more members join. First 100 members lock in $29/mo for life. After that it goes up. The sooner you join, the less you pay forever.
+            </div>
+            <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+              {[{t:"Members 1-100",p:"$29/mo",active:true},{t:"Members 101-200",p:"$49/mo",active:false},{t:"Members 200+",p:"$99/mo",active:false}].map(tier=>(
+                <div key={tier.t} style={{display:"flex",justifyContent:"space-between",fontFamily:"var(--mono)",fontSize:10,padding:"5px 8px",background:tier.active?"rgba(0,255,136,.08)":"rgba(255,255,255,.02)",borderRadius:4,border:tier.active?"1px solid rgba(0,255,136,.2)":"1px solid transparent"}}>
+                  <span style={{color:tier.active?"var(--green)":"var(--muted)"}}>{tier.t}</span>
+                  <span style={{color:tier.active?"var(--green)":"var(--muted)",fontWeight:700}}>{tier.p}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FEATURES */}
       <section id="features" className="lp-section" style={{paddingTop:20}}>
         <span className="sec-label">Features</span>
         <h2 className="sec-title">Everything you need<br/>to buy smarter.</h2>
-        <p className="sec-sub">Six tools that turn a subscription into a profitable edge on every pull.</p>
+        <p className="sec-sub">Six tools — three exclusive to PackPulse — that give you a real edge on every Courtyard pull.</p>
         <div className="feat-grid">
           {FEATURES.map((f,i)=>(
             <div key={i} className="feat-card">
@@ -393,29 +445,63 @@ export default function LandingPage({ onEnterApp }: { onEnterApp: () => void }) 
       <div id="pricing" style={{padding:"80px 48px",maxWidth:1200,margin:"0 auto",textAlign:"center" as const}}>
         <span className="sec-label">Pricing</span>
         <h2 className="sec-title">Lock in your rate<br/>before it goes up.</h2>
-        <p className="sec-sub" style={{margin:"0 auto"}}>One plan. Everything included. Priced to pay for itself on your first smart buy.</p>
-        <div className="pricing-card">
-          <div className="pc-top">
-            <div className="pc-name">Early Access</div>
-            <div className="pc-price-row"><span className="pc-dollar">$</span><span className="pc-amount">{price}</span><span className="pc-period">/ mo</span></div>
-            <div className="pc-sub">Billed monthly · Cancel anytime</div>
+        <p className="sec-sub" style={{margin:"0 auto 48px"}}>Price increases as more members join. Earlier is always cheaper — and locked in for life.</p>
+
+        {/* 3-tier pricing */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,maxWidth:900,margin:"0 auto 48px"}}>
+          {/* Tier 1 — Sold out / past */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:24,opacity:.5}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:".15em",textTransform:"uppercase" as const,marginBottom:8}}>Founding</div>
+            <div style={{fontFamily:"var(--display)",fontSize:32,fontWeight:800,color:"var(--muted)",lineHeight:1}}>—</div>
+            <div style={{fontSize:11,color:"var(--muted)",margin:"8px 0 16px",lineHeight:1.5}}>First tier. Only available once. Members who joined at the very beginning, locked in for life.</div>
+            <div style={{padding:"8px 16px",border:"1px solid var(--border)",borderRadius:6,fontSize:12,color:"var(--muted)",fontFamily:"var(--mono)"}}>Sold Out</div>
           </div>
-          <div className="pc-bar-row"><span>{filled}/100 early access spots filled</span><span style={{color:"#ffcc44"}}>{remaining} left</span></div>
-          <div className="pc-bar-wrap"><div className="pc-bar"><div className="pc-bar-fill" style={{width:`${Math.max(pct,2)}%`}}/></div></div>
-          <div className="pc-feats">
-            {["Live EV tracking across 51 active Courtyard packs","Buyback EV — real cash after all fees (exclusive)","BUY / WAIT / SKIP decision engine on every pack","TradingView-style EV history charts","Push alerts when packs cross 1.2x buyback EV","Budget Advisor — best pack for your budget","Full pull feed — 50 live pulls with card images","Fee breakdown — every hidden cost exposed"].map((f,i)=>(
-              <div key={i} className="pcf-item"><div className="pcf-check">✓</div><span>{f}</span></div>
-            ))}
-          </div>
-          <div className="pc-cta">
+          {/* Tier 2 — Current */}
+          <div style={{background:"rgba(0,255,136,.03)",border:"1px solid rgba(0,255,136,.3)",borderRadius:12,padding:24,position:"relative" as const}}>
+            <div style={{position:"absolute" as const,top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--green)",color:"#000",fontSize:8,fontWeight:700,padding:"2px 12px",borderRadius:10,fontFamily:"var(--mono)",whiteSpace:"nowrap" as const}}>CURRENT TIER</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--green)",letterSpacing:".15em",textTransform:"uppercase" as const,marginBottom:8}}>Early Access</div>
+            <div style={{display:"flex",alignItems:"flex-start",gap:2,justifyContent:"center",marginBottom:4}}>
+              <span style={{fontFamily:"var(--display)",fontSize:18,fontWeight:700,color:"var(--muted)",marginTop:8}}>{"\$"}</span>
+              <span style={{fontFamily:"var(--display)",fontSize:52,fontWeight:800,lineHeight:1,letterSpacing:"-.04em"}}>{price}</span>
+              <span style={{fontSize:12,color:"var(--muted)",alignSelf:"flex-end",marginBottom:8}}>/mo</span>
+            </div>
+            <div style={{fontSize:11,color:"var(--muted)",marginBottom:12}}>Members 1–100</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",marginBottom:5}}>
+              <span>{filled}/100 filled</span>
+              <span style={{color:"#ffcc44",fontWeight:700}}>{remaining} left</span>
+            </div>
+            <div style={{height:4,background:"rgba(255,255,255,.06)",borderRadius:2,overflow:"hidden",marginBottom:16}}>
+              <div style={{height:"100%",width:`${Math.max(pct,2)}%`,background:"var(--green)",borderRadius:2}}/>
+            </div>
             {isSignedIn ? (
-              <button className="btn-full" onClick={onEnterApp}>Join Now — Start Winning →</button>
+              <button className="btn-full" onClick={onEnterApp} style={{marginBottom:6}}>Join Now →</button>
             ) : (
               <SignInButton mode="modal" forceRedirectUrl="/?upgrade=1">
-                <button className="btn-full">Join Now — ${price}/mo →</button>
+                <button className="btn-full" style={{marginBottom:6}}>Join Now — ${price}/mo →</button>
               </SignInButton>
             )}
-            <div className="pc-guarantee">{remaining} early access spots left at this rate</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)"}}>✓ Cancel anytime &nbsp; ✓ Instant access &nbsp; ✓ 7-day refund</div>
+          </div>
+          {/* Tier 3 — Locked */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:24,opacity:.5}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:".15em",textTransform:"uppercase" as const,marginBottom:8}}>Standard</div>
+            <div style={{fontFamily:"var(--display)",fontSize:32,fontWeight:800,color:"var(--muted)",lineHeight:1}}>$99</div>
+            <div style={{fontSize:11,color:"var(--muted)",margin:"8px 0 16px",lineHeight:1.5,fontFamily:"var(--mono)"}}>/mo · Members 200+</div>
+            <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,marginBottom:16}}>Full price tier. Available after Early Access and Growth tiers fill. Includes all Pro features.</div>
+            <div style={{padding:"8px 16px",border:"1px solid var(--border)",borderRadius:6,fontSize:12,color:"var(--muted)",fontFamily:"var(--mono)"}}>Locked</div>
+          </div>
+        </div>
+
+        {/* Features included */}
+        <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:28,maxWidth:680,margin:"0 auto"}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--green)",letterSpacing:".18em",marginBottom:16,textAlign:"left" as const}}>EVERY PLAN INCLUDES</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,textAlign:"left" as const}}>
+            {["Live EV tracking — 51 active Courtyard packs","Buyback EV — real cash after all fees ★","STRONG BUY / BUY / WAIT / SKIP signals","TradingView-style EV history charts","Push alerts at 1.2x+ buyback EV","Budget Advisor — best pack for your budget","Full pull feed — 50 live pulls + card images","Fee breakdown — every hidden cost exposed"].map((f,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--muted)"}}>
+                <span style={{width:16,height:16,borderRadius:"50%",background:"var(--green-muted)",border:"1px solid rgba(0,255,136,.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--green)",flexShrink:0}}>✓</span>
+                {f}
+              </div>
+            ))}
           </div>
         </div>
       </div>
