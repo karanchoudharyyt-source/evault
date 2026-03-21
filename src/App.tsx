@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider, useUser, useClerk, SignInButton, UserButton } from "@clerk/clerk-react";
 import { useCourtyardData } from "./hooks/use-courtyard-data";
 import { Pack, PullRecord } from "./data/packs";
+import LandingPage from "./LandingPage";
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
@@ -1344,11 +1345,63 @@ function Dashboard(){
   );
 }
 
+function AppRouter(){
+  const [showApp, setShowApp] = useState(false);
+  const { isLoaded, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if(p.get('checkout')==='success' || p.get('upgrade')==='1') {
+      setShowApp(true);
+    }
+  }, []);
+
+  // Once signed in, always go to app
+  useEffect(() => {
+    if(isSignedIn && showApp) return; // already going to app
+    if(isSignedIn) setShowApp(true);
+  }, [isSignedIn]);
+
+  if(!isLoaded) return(
+    <div style={{height:"100vh",background:"#030810",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{fontFamily:"monospace",color:"#00ff87",fontSize:12,letterSpacing:2}}>LOADING...</div>
+    </div>
+  );
+
+  // Show landing page — but "enter app" requires sign in
+  if(!showApp) return(
+    <LandingPage onEnterApp={()=>{
+      if(isSignedIn) setShowApp(true);
+      else openSignIn({ afterSignInUrl: "/?app=1" });
+    }}/>
+  );
+
+  // Signed in → dashboard
+  if(isSignedIn) return <Dashboard/>;
+
+  // Not signed in but tried to access app → force sign in
+  return(
+    <div style={{height:"100vh",background:"#030810",display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:20,fontFamily:"monospace"}}>
+      <div style={{fontSize:28,fontWeight:800,color:"#fff",fontFamily:"Syne,sans-serif"}}>Sign in to continue</div>
+      <div style={{fontSize:13,color:"#3a5068",marginBottom:8}}>PackPulse requires an account to access live EV data.</div>
+      <SignInButton mode="modal" forceRedirectUrl="/?app=1">
+        <button style={{padding:"13px 32px",background:"#00ff87",color:"#000",border:"none",borderRadius:9,fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"monospace"}}>
+          Sign In / Create Account →
+        </button>
+      </SignInButton>
+      <button onClick={()=>setShowApp(false)} style={{all:"unset" as any,cursor:"pointer",fontSize:12,color:"#3a5068"}}>
+        ← Back to home
+      </button>
+    </div>
+  );
+}
+
 export default function App(){
   return(
     <ClerkProvider publishableKey={CLERK_KEY}>
       <QueryClientProvider client={queryClient}>
-        <Dashboard/>
+        <AppRouter/>
       </QueryClientProvider>
     </ClerkProvider>
   );
