@@ -563,7 +563,7 @@ function Dashboard(){
 
   // Countdown
   useEffect(()=>{
-    const t=setInterval(()=>sCd(c=>{if(c<=1){refetch();return 60;}return c-1;}),1000);
+    const t=setInterval(()=>sCd(c=>{if(c<=1){refetch();return 30;}return c-1;}),1000);
     return()=>clearInterval(t);
   },[refetch]);
 
@@ -881,7 +881,7 @@ function Dashboard(){
                       </div>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-                      {[["EV RATIO",$x(top.evRatio),top.evRatio>=1?"#00ff87":"#ff3860"],["BUYBACK EV",$x(top.buybackEv),top.buybackEv>=1?"#00ff87":"#ff3860"],["CASH OUT",$f((top.calEv??top.avgFmv??0)*0.846),top.buybackEv>=1?"#00ff87":"#ff3860"],["WIN RATE",$p(top.winRate),top.winRate>=.5?"#00ff87":"#3a5068"]].map(([l,v,c])=>(
+                      {[["EV RATIO",$x(top.evRatio),top.evRatio>=1?"#00ff87":"#ff3860"],["BUYBACK EV",$x(top.buybackEv),top.buybackEv>=1?"#00ff87":"#ff3860"],["CASH OUT",$f(safeN(top.calEv??top.avgFmv)*0.846),top.buybackEv>=1?"#00ff87":"#ff3860"],["WIN RATE",$p(top.winRate),top.winRate>=.5?"#00ff87":"#3a5068"]].map(([l,v,c])=>(
                         <div key={l as string} style={{background:"#060d18",borderRadius:7,padding:"8px 10px",border:"1px solid #122038"}}>
                           <div style={{fontSize:7,color:"#3a5068",...M,marginBottom:3}}>{l}</div>
                           <div style={{fontWeight:800,fontSize:16,color:c as string,...M}}>{v}</div>
@@ -913,31 +913,41 @@ function Dashboard(){
           {/* ═══ PULL FEED ═══ */}
           {data&&view==="feed"&&(
             <div style={{flex:1,overflowY:"auto",padding:10,display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{padding:"4px 2px 6px",fontSize:11,color:"#3a5068"}}>{data.recentPulls.length} most recent pulls from Courtyard.io</div>
+              <div style={{padding:"4px 2px 6px",fontSize:11,color:"#3a5068"}}>{data.recentPulls.length} most recent pulls from Courtyard.io — live feed</div>
               {(data.recentPulls as PullRecord[]).map(pull=>{
                 const name=pull.buyer??pull.user??"anon";
                 const fmv=pull.fmv??0;
-                const packPrice=pull.packPrice??50;
+                const packId=pull.packId??"";
+                const packObj=data.packs.find(p=>p.id===packId);
+                const packPrice=pull.packPrice??packObj?.price??50;
                 const win=fmv>packPrice,diff=fmv-packPrice;
                 const hue=name.split("").reduce((a:number,c:string)=>a+c.charCodeAt(0),0)%360;
                 const displayTitle=pull.title??pull.cardName??pull.packName??"";
                 const timeStr=pull.txTime??pull.timestamp??"";
+                const cardImg=pull.image??"";
                 return(
-                  <div key={pull.id} className="feed-card">
-                    <div style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,background:`hsl(${hue},25%,10%)`,border:`1px solid hsl(${hue},25%,18%)`,color:`hsl(${hue},40%,55%)`,...M}}>
-                      {name.slice(0,2).toUpperCase()}
-                    </div>
+                  <div key={pull.id} className="feed-card" style={{alignItems:"center"}}>
+                    {/* Card image */}
+                    {cardImg?(
+                      <img src={cardImg} alt="" style={{width:44,height:60,objectFit:"contain",borderRadius:4,flexShrink:0,background:"#0b1728"}}
+                        onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                    ):(
+                      <div style={{width:44,height:60,borderRadius:4,background:"#0b1728",border:"1px solid #122038",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#3a5068",...M}}>IMG</div>
+                    )}
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap" as const}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap" as const}}>
+                        <div style={{width:20,height:20,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0,background:`hsl(${hue},25%,10%)`,border:`1px solid hsl(${hue},25%,18%)`,color:`hsl(${hue},40%,55%)`,...M}}>
+                          {name.slice(0,2).toUpperCase()}
+                        </div>
                         <span style={{fontSize:11,fontWeight:700,color:"#00cc6a"}}>@{name}</span>
-                        <span style={{fontSize:9,color:"#3a5068",padding:"1px 5px",background:"#0b1728",border:"1px solid #122038",borderRadius:3,...M}}>{pull.packName}</span>
-                        {timeStr&&<span style={{fontSize:9,color:"#3a5068",marginLeft:"auto",...M}}>{ago(timeStr)} ago</span>}
+                        {packObj&&<span style={{fontSize:8,color:"#3a5068",padding:"1px 5px",background:"#0b1728",border:"1px solid #122038",borderRadius:3,...M}}>{packObj.name}</span>}
+                        {timeStr&&<span style={{fontSize:8,color:"#3a5068",marginLeft:"auto",...M}}>{ago(timeStr)} ago</span>}
                       </div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{displayTitle}</div>
-                      {pull.grade&&<div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>{pull.grade}</div>}
+                      <div style={{fontSize:12,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{displayTitle}</div>
+                      {pull.grade&&<div style={{fontSize:8,color:"#3a5068",marginTop:2,...M}}>{pull.grade}</div>}
                     </div>
                     <div style={{textAlign:"right" as const,flexShrink:0}}>
-                      <div style={{fontWeight:800,fontSize:14,color:fmv>0?(win?"#00ff87":"#3a5068"):"#3a5068",...M}}>{fmv>0?$f(fmv):"—"}</div>
+                      <div style={{fontWeight:800,fontSize:14,color:fmv>0?(win?"#00ff87":"#ff3860"):"#3a5068",...M}}>{fmv>0?$f(fmv):"—"}</div>
                       {fmv>0&&<div style={{fontSize:9,color:win?"#00cc6a":"#ff3860",marginTop:2,...M}}>{win?"+":""}{$f(diff)}</div>}
                     </div>
                   </div>
