@@ -149,7 +149,7 @@ export default async function handler(req, res) {
       grade:    a.attributes?.find(x => x.name === 'Grade')?.value ?? '',
     }));
 
-    res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=10');
+    res.setHeader('Cache-Control', 's-maxage=25, stale-while-revalidate=5');
     return res.status(200).json({ packs, recentPulls, totalPacks: packs.length });
 
   } catch (error) {
