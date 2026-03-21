@@ -363,7 +363,9 @@ function Dashboard(){
   };
   const removeToast=(id:number)=>setToasts(t=>t.filter(x=>x.id!==id));
 
-  // Register service worker + force re-subscribe if VAPID key changed
+  // Register service worker + auto-sync subscription to Supabase on every load
+  // This fixes the "notifications off after reopening" issue —
+  // the browser keeps the subscription but Supabase may have lost it (DB wipe, etc.)
   useEffect(()=>{
     if(swRegistered.current) return;
     swRegistered.current=true;
@@ -375,24 +377,16 @@ function Dashboard(){
 
       const existingSub=await reg.pushManager.getSubscription();
       if(existingSub){
-        // Check if this subscription was created with the current VAPID key
-        // by comparing the applicationServerKey stored in the subscription
         const subKey=existingSub.options?.applicationServerKey;
         const currentKey=urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-        
         let keyMatch=false;
         if(subKey){
           const subKeyBytes=new Uint8Array(subKey as ArrayBuffer);
           keyMatch=subKeyBytes.length===currentKey.length&&subKeyBytes.every((b,i)=>b===currentKey[i]);
         }
 
-        if(keyMatch){
-          // Key matches — use existing subscription
-          setPushSub(existingSub);
-          setIsSubscribed(true);
-        } else {
-          // Key mismatch — old subscription, unsubscribe and re-subscribe with new key
-          console.log("VAPID key changed — re-subscribing");
+        if(!keyMatch){
+          // VAPID key changed — unsubscribe and re-subscribe
           await existingSub.unsubscribe();
           try{
             const newSub=await reg.pushManager.subscribe({
@@ -401,14 +395,27 @@ function Dashboard(){
             });
             setPushSub(newSub);
             setIsSubscribed(true);
-            // Save new subscription silently
             const p256dh=btoa(String.fromCharCode(...new Uint8Array(newSub.getKey("p256dh")!)));
             const auth=btoa(String.fromCharCode(...new Uint8Array(newSub.getKey("auth")!)));
             fetch("/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},
               body:JSON.stringify({subscription:{endpoint:newSub.endpoint,keys:{p256dh,auth}},packIds:[],alertOnEv:true,alertOnBuyback:true,evThreshold:1.0,alertType:"all"})
             }).catch(()=>{});
           }catch(e){console.error("Re-subscribe failed:",e);}
+          return;
         }
+
+        // Key matches — update state
+        setPushSub(existingSub);
+        setIsSubscribed(true);
+
+        // ALWAYS re-save to Supabase silently on every page load
+        // Fixes: subscription lost from DB (wipe/clear), new device, etc.
+        // We don't override packIds here — the API upserts so existing pack selections are preserved
+        const p256dh=btoa(String.fromCharCode(...new Uint8Array(existingSub.getKey("p256dh")!)));
+        const auth=btoa(String.fromCharCode(...new Uint8Array(existingSub.getKey("auth")!)));
+        fetch("/api/subscribe-refresh",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({endpoint:existingSub.endpoint,p256dh,auth})
+        }).catch(()=>{});
       }
     }).catch(()=>{});
   },[]);
