@@ -780,7 +780,7 @@ function Dashboard(){
                                 {pack.category} · #{idx+1}
                               </div>
                               <div style={{fontWeight:800,fontSize:14,color:"#fff",lineHeight:1.2,marginBottom:2}}>{pack.name}</div>
-                              <div style={{fontSize:10,color:"#3a5068"}}>${pack.price}.00 · {pack.totalPulls} pulls</div>
+                              <div style={{fontSize:10,color:"#3a5068"}}>${pack.price}.00 · {pack.pullCount??pack.totalPulls??0} pulls</div>
                             </div>
                             <button className={`bell${hasAlert?" on":""}`}
                               onClick={(e)=>{e.stopPropagation();toggleAlert(pack.id);}}
@@ -803,7 +803,7 @@ function Dashboard(){
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                             <div>
                               <div style={{fontSize:7,color:"#3a5068",...M,marginBottom:2}}>CAL. EV</div>
-                              <div style={{fontWeight:700,fontSize:14,color:evColor2,...M}}>{$f(pack.calibratedEv)}</div>
+                              <div style={{fontWeight:700,fontSize:14,color:evColor2,...M}}>{$f(pack.calEv??pack.calibratedEv??0)}</div>
                             </div>
                             <div style={{textAlign:"right" as const}}>
                               <div style={{fontSize:8,color:"#3a5068",marginBottom:3}}>Win rate <span style={{color:"#c8dff0",fontWeight:700,...M}}>{$p(pack.winRate)}</span></div>
@@ -902,15 +902,15 @@ function Dashboard(){
               <div style={{padding:"4px 2px 6px",fontSize:11,color:"#3a5068"}}>{data.recentPulls.length} most recent pulls from Courtyard.io</div>
               {(data.recentPulls as PullRecord[]).map(pull=>{
                 const win=pull.fmv>pull.packPrice,diff=pull.fmv-pull.packPrice;
-                const hue=pull.user.split("").reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+                const hue=pull.buyer??pull.user.split("").reduce((a,c)=>a+c.charCodeAt(0),0)%360;
                 return(
                   <div key={pull.id} className="feed-card">
                     <div style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,background:`hsl(${hue},25%,10%)`,border:`1px solid hsl(${hue},25%,18%)`,color:`hsl(${hue},40%,55%)`,...M}}>
-                      {pull.user.slice(0,2).toUpperCase()}
+                      {pull.buyer??pull.user.slice(0,2).toUpperCase()}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap" as const}}>
-                        <span style={{fontSize:11,fontWeight:700,color:"#00cc6a"}}>@{pull.user}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:"#00cc6a"}}>@{pull.buyer??pull.user}</span>
                         <span style={{fontSize:9,color:"#3a5068",padding:"1px 5px",background:"#0b1728",border:"1px solid #122038",borderRadius:3,...M}}>{pull.packName}</span>
                         <span style={{fontSize:9,color:"#3a5068",marginLeft:"auto",...M}}>{ago(pull.timestamp)} ago</span>
                       </div>
@@ -941,7 +941,7 @@ function Dashboard(){
                   <img src={packImg(p.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
-                    <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.category} · ${p.price}/pack · {p.totalPulls} pulls</div>
+                    <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
                   </div>
                   <button className={`bell${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)}>{hasAlert?"🔔":"🔕"}</button>
                   <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
@@ -965,7 +965,7 @@ function Dashboard(){
                       <div className="dp-tile" style={{borderColor:p.evRatio>=1?"rgba(0,255,135,.2)":"rgba(255,56,96,.15)"}}>
                         <span className="dp-tl">FMV EV</span>
                         <div className="dp-tv" style={{color:evColor2}}>{$x(p.evRatio)}</div>
-                        <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(p.calibratedEv)} avg</div>
+                        <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(p.calEv??p.calibratedEv??0)} avg</div>
                       </div>
                       <div className="dp-tile" style={{borderColor:p.buybackEv>=1?"rgba(255,209,102,.2)":"rgba(255,56,96,.15)"}}>
                         <span className="dp-tl">BUYBACK EV ★</span>
