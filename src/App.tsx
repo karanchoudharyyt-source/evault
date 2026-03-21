@@ -85,16 +85,15 @@ function UpgradeModal({onClose}:{onClose:()=>void}){
   const price     = stats?.currentPrice ?? 19;
   const remaining = stats?.foundingRemaining ?? 25;
   const tier      = stats?.currentTier ?? 'founding';
-  const filled    = Math.max(0, 25 - remaining);
-  const pct       = Math.round((filled/25)*100);
-  const isFounding= tier==='founding';
+  const filled    = Math.max(0, 100 - remaining);
+  const pct       = Math.round((filled/100)*100);
+  const isFounding= tier==='early';
 
   // Tier labels & next price
   const tierMap:{[k:string]:{label:string;next:string;nextPrice:number}} = {
-    founding: {label:"FOUNDING MEMBER",next:"Early Access ($29/mo)",nextPrice:29},
-    early:    {label:"EARLY ACCESS",   next:"Growth ($49/mo)",nextPrice:49},
-    growth:   {label:"GROWTH",         next:"Standard ($99/mo)",nextPrice:99},
-    standard: {label:"STANDARD",       next:"",nextPrice:0},
+    early:    {label:"EARLY ACCESS",  next:"Growth ($49/mo)",    nextPrice:49},
+    growth:   {label:"GROWTH",        next:"Standard ($99/mo)",  nextPrice:99},
+    standard: {label:"STANDARD",      next:"",                   nextPrice:0},
   };
   const tm = tierMap[tier] ?? tierMap.founding;
 
@@ -121,13 +120,13 @@ function UpgradeModal({onClose}:{onClose:()=>void}){
             </div>
             {isFounding&&<div style={{marginLeft:"auto",background:"rgba(255,209,102,.08)",border:"1px solid rgba(255,209,102,.2)",borderRadius:8,padding:"5px 10px",textAlign:"center" as const}}>
               <div style={{fontSize:8,color:"#3a5068",...M}}>NEXT PRICE</div>
-              <div style={{fontSize:13,fontWeight:800,color:"#ffd166",...M}}>$29/mo</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#ffd166",...M}}>${tm.nextPrice}/mo</div>
             </div>}
           </div>
           {isFounding&&(
             <>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:4,...M}}>
-                <span style={{color:"#3a5068"}}>{filled}/25 founding spots claimed</span>
+                <span style={{color:"#3a5068"}}>{filled}/100 early access spots claimed</span>
                 <span style={{color:remaining<=5?"#ff3860":"#ffd166",fontWeight:700}}>{remaining} left</span>
               </div>
               <div style={{height:4,background:"#122038",borderRadius:2,overflow:"hidden"}}>
@@ -165,7 +164,7 @@ function UpgradeModal({onClose}:{onClose:()=>void}){
           {user?(
             <button onClick={handleUpgrade} disabled={loading}
               style={{width:"100%",padding:"13px",background:loading?"#1a2a3a":"#00ff87",color:"#000",border:"none",borderRadius:10,fontWeight:800,fontSize:14,cursor:loading?"not-allowed":"pointer",...M,marginBottom:10}}>
-              {loading?"Redirecting...":isFounding?`Lock In $${Math.round(price)}/mo →`:`Get Pro — $${Math.round(price)}/mo →`}
+              {loading?"Redirecting...":isFounding?`Lock In $${Math.round(price)}/mo Early Access Rate →`:`Get Pro — $${Math.round(price)}/mo →`}
             </button>
           ):(
             <SignInButton mode="modal" forceRedirectUrl="/?upgrade=1">
@@ -589,9 +588,9 @@ function DetailPanel({sel,isPro,alerts,histData,onClose,onUpgrade,onToggleAlert}
         ))}
         <button onClick={onUpgrade}
           style={{width:"100%",maxWidth:260,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
-          ⚡ Unlock for $19/mo →
+          ⚡ Unlock — $29/mo Early Access →
         </button>
-        <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>$19/mo founding rate · First 25 users · Cancel anytime</div>
+        <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>$29/mo early access · First 100 users · Cancel anytime</div>
       </div>
     </div>
   );
@@ -1218,7 +1217,7 @@ function Dashboard(){
               ))}
               <button onClick={()=>setShowUpgrade(true)}
                 style={{width:"100%",maxWidth:280,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace",marginTop:4}}>
-                ⚡ Unlock for $19/mo →
+                ⚡ Unlock — $29/mo Early Access →
               </button>
               <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime · 7-day refund</div>
             </div>
