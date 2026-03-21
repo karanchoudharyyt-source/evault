@@ -596,6 +596,125 @@ function AlertPanel({
 }
 
 
+// ─── Detail Panel Component ───────────────────────────────────────────────────
+function DetailPanel({sel,isPro,alerts,histData,onClose,onUpgrade,onToggleAlert}:{
+  sel:Pack|null; isPro:boolean; alerts:Set<string>;
+  histData:any; onClose:()=>void; onUpgrade:()=>void;
+  onToggleAlert:(id:string)=>void;
+}){
+  const M={fontFamily:"monospace"} as React.CSSProperties;
+  if(!sel) return null;
+
+  // Free users — upgrade prompt
+  if(!isPro) return(
+    <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+      <div style={{padding:"11px 12px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0,background:"#060d18"}}>
+        <img src={packImg(sel.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{sel.name}</div>
+          <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>EV: {$x(sel.evRatio)} · ${sel.price}/pack</div>
+        </div>
+        <button className="dp-x" onClick={onClose}>✕</button>
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:24,textAlign:"center" as const}}>
+        <div style={{fontWeight:800,fontSize:18,color:"#fff"}}>Full Analysis is Pro</div>
+        <div style={{fontSize:12,color:"#3a5068",maxWidth:260,lineHeight:1.6}}>
+          Unlock Buyback EV, Decision Engine, EV history chart, fee breakdown, and push alerts for this pack.
+        </div>
+        {([
+          {e:"🎯",t:"Buyback EV",d:"Real cash after ALL fees"},
+          {e:"⚡",t:"BUY/WAIT/SKIP signal",d:"Data-backed decision"},
+          {e:"📈",t:"EV history chart",d:"See when EV shifted"},
+          {e:"💡",t:"Fee breakdown",d:"Every hidden cost exposed"},
+        ] as {e:string;t:string;d:string}[]).map(f=>(
+          <div key={f.t} style={{display:"flex",gap:10,alignItems:"center",width:"100%",maxWidth:260,textAlign:"left" as const}}>
+            <span style={{fontSize:16}}>{f.e}</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:11,color:"#fff"}}>{f.t}</div>
+              <div style={{fontSize:9,color:"#3a5068"}}>{f.d}</div>
+            </div>
+            <span style={{marginLeft:"auto",color:"#00ff87",fontSize:12}}>✓</span>
+          </div>
+        ))}
+        <button onClick={onUpgrade}
+          style={{width:"100%",maxWidth:260,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
+          ⚡ Unlock for $19/mo →
+        </button>
+        <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime</div>
+      </div>
+    </div>
+  );
+
+  // Pro users — full analysis
+  const p=sel, d=dec(p), sg=sig(p.evRatio);
+  const evColor2=evc(p.evRatio), bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
+  const trueCost=p.price*1.074, cashOut=safeN(p.calEv??p.avgFmv)*0.846;
+  const hasAlert=alerts.has(p.id);
+  return(
+    <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+      <div style={{padding:"11px 12px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0,background:"#060d18"}}>
+        <img src={packImg(p.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
+          <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.categoryTitle??p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
+        </div>
+        <button className={`bell${hasAlert?" on":""}`} onClick={()=>onToggleAlert(p.id)} title="Toggle alert">{hasAlert?"🔔":"🔕"}</button>
+        <button className="dp-x" onClick={onClose}>✕</button>
+      </div>
+      <div className="dp-scroll">
+        <div style={{background:d.bg,border:`1px solid ${d.c}44`,borderRadius:8,padding:"12px 13px"}}>
+          <div style={{fontSize:7,color:d.c,letterSpacing:1.5,...M,fontWeight:700,marginBottom:5}}>SHOULD YOU PULL?</div>
+          <div style={{fontWeight:800,fontSize:18,color:d.c,...M,marginBottom:5}}>{d.action}</div>
+          <div style={{fontSize:11,color:d.c,opacity:.85,lineHeight:1.5}}>{d.reason}</div>
+        </div>
+        <div className="dp-sec">
+          <span className="dp-lbl">EV RATIO TREND · 1m</span>
+          <EVChart pack={p} histData={histData}/>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M}}>
+            <span>Earlier ←</span><span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
+          </div>
+        </div>
+        <div className="dp-sec">
+          <span className="dp-lbl">EXPECTED VALUE</span>
+          <div className="dp-2">
+            <div className="dp-tile" style={{borderColor:p.evRatio>=1?"rgba(0,255,135,.2)":"rgba(255,56,96,.15)"}}>
+              <span className="dp-tl">FMV EV</span>
+              <div className="dp-tv" style={{color:evColor2}}>{$x(p.evRatio)}</div>
+              <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(p.calEv??p.calibratedEv??0)} avg</div>
+            </div>
+            <div className="dp-tile" style={{borderColor:p.buybackEv>=1?"rgba(255,209,102,.2)":"rgba(255,56,96,.15)"}}>
+              <span className="dp-tl">BUYBACK EV ★</span>
+              <div className="dp-tv" style={{color:bbC}}>{$x(p.buybackEv)}</div>
+              <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(cashOut)} cash</div>
+            </div>
+          </div>
+          <div className="dp-2">
+            <div className="dp-tile"><span className="dp-tl">WIN RATE</span><div className="dp-tv" style={{color:p.winRate>=.5?"#00ff87":"#3a5068"}}>{$p(p.winRate)}</div></div>
+            <div className="dp-tile"><span className="dp-tl">AVG PULL VALUE</span><div className="dp-tv" style={{color:"#00ff87"}}>{$f(safeN(p.calEv??p.avgFmv))}</div></div>
+          </div>
+          <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
+        </div>
+        <div className="dp-sec">
+          <span className="dp-lbl">💡 FEE BREAKDOWN — EXCLUSIVE</span>
+          <table className="fee-t"><tbody>
+            <tr><td>Advertised price</td><td style={{textAlign:"right" as const}}>{$f(p.price)}</td></tr>
+            <tr><td style={{color:"#ff3860"}}>Payment markup (+7.4%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>{$f(trueCost)}</td></tr>
+            <tr><td>Average FMV won</td><td style={{textAlign:"right" as const,color:evColor2}}>{$f(safeN(p.calEv??p.avgFmv))}</td></tr>
+            <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right" as const}}>{$f(safeN(p.calEv??p.avgFmv)*0.9)}</td></tr>
+            <tr><td style={{color:"#ff3860"}}>Processing fee (−6%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>−{$f(safeN(p.calEv??p.avgFmv)*0.9*0.06)}</td></tr>
+            <tr className="tot"><td>💵 Cash in your hand</td><td style={{textAlign:"right" as const,color:bbC,fontSize:15}}>{$f(cashOut)}</td></tr>
+          </tbody></table>
+        </div>
+        <a href={`https://courtyard.io/vending-machine/${p.id}`} target="_blank" rel="noreferrer"
+          style={{display:"block",textAlign:"center" as const,padding:"12px",borderRadius:9,fontWeight:800,fontSize:14,textDecoration:"none",background:p.evRatio>=1?"#00ff87":"#0b1728",color:p.evRatio>=1?"#000":"#3a5068",border:p.evRatio>=1?"none":"1px solid #122038"}}>
+          {p.evRatio>=1?"🟢 Pull This Pack on Courtyard →":"View on Courtyard →"}
+        </a>
+        <div style={{fontSize:8,color:"#3a5068",textAlign:"center" as const,...M,lineHeight:1.6}}>For informational purposes only. Not financial advice.</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard(){
   const {data,isLoading,refetch}=useCourtyardData();
@@ -990,7 +1109,7 @@ function Dashboard(){
                       </div>
                       <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
                     </div>
-                  );})()}
+                  );})()
                 </div>
               </div>
 
@@ -1237,113 +1356,13 @@ function Dashboard(){
 
         {/* ═══ DETAIL PANEL ═══ */}
         <div className={sel?"detail-panel open":"detail-panel"}>
-          {sel&&(!isPro?(
-          // Free users see upgrade prompt in detail panel
-          <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
-            <div style={{padding:"11px 12px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0,background:"#060d18"}}>
-              <img src={packImg(sel.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{sel.name}</div>
-                <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>EV: {$x(sel.evRatio)} · ${sel.price}/pack</div>
-              </div>
-              <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
-            </div>
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:24,textAlign:"center" as const}}>
-              <div style={{fontWeight:800,fontSize:18,color:"#fff"}}>Full Analysis is Pro</div>
-              <div style={{fontSize:12,color:"#3a5068",maxWidth:260,lineHeight:1.6}}>
-                Unlock Buyback EV, Decision Engine, EV history chart, fee breakdown, and push alerts for this pack.
-              </div>
-              {[
-                {e:"🎯",t:"Buyback EV",d:"Real cash after ALL fees"},
-                {e:"⚡",t:"BUY/WAIT/SKIP signal",d:"Data-backed decision"},
-                {e:"📈",t:"EV history chart",d:"See when EV shifted"},
-                {e:"💡",t:"Fee breakdown",d:"Every hidden cost exposed"},
-              ].map(f=>(
-                <div key={f.t} style={{display:"flex",gap:10,alignItems:"center",width:"100%",maxWidth:260,textAlign:"left" as const}}>
-                  <span style={{fontSize:16}}>{f.e}</span>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:11,color:"#fff"}}>{f.t}</div>
-                    <div style={{fontSize:9,color:"#3a5068"}}>{f.d}</div>
-                  </div>
-                  <span style={{marginLeft:"auto",color:"#00ff87",fontSize:12}}>✓</span>
-                </div>
-              ))}
-              <button onClick={()=>setShowUpgrade(true)}
-                style={{width:"100%",maxWidth:260,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
-                ⚡ Unlock for $19/mo →
-              </button>
-              <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime</div>
-            </div>
-          </div>
-        ):(()=>{
-            const p=sel,d=dec(p),sg=sig(p.evRatio);
-            const evColor2=evc(p.evRatio),bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
-            const trueCost=p.price*1.074,cashOut=(safeN(p.calEv??p.avgFmv))*0.846;
-            const hasAlert=alerts.has(p.id);
-            return(
-              <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
-                <div style={{padding:"11px 12px",borderBottom:"1px solid #122038",display:"flex",alignItems:"center",gap:9,flexShrink:0,background:"#060d18"}}>
-                  <img src={packImg(p.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
-                    <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.categoryTitle??p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
-                  </div>
-                  <button className={`bell${hasAlert?" on":""}`} onClick={()=>isPro?toggleAlert(p.id):setShowUpgrade(true)} title={isPro?"Toggle alert":"Pro feature"}>{hasAlert?"🔔":"🔕"}</button>
-                  <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
-                </div>
-                <div className="dp-scroll">
-                  <div style={{background:d.bg,border:`1px solid ${d.c}44`,borderRadius:8,padding:"12px 13px"}}>
-                    <div style={{fontSize:7,color:d.c,letterSpacing:1.5,...M,fontWeight:700,marginBottom:5}}>SHOULD YOU PULL?</div>
-                    <div style={{fontWeight:800,fontSize:18,color:d.c,...M,marginBottom:5}}>{d.action}</div>
-                    <div style={{fontSize:11,color:d.c,opacity:.85,lineHeight:1.5}}>{d.reason}</div>
-                  </div>
-                  <div className="dp-sec">
-                    <span className="dp-lbl">EV RATIO TREND · 1m</span>
-                    <ProGate onUpgrade={()=>setShowUpgrade(true)}><EVChart pack={p} histData={histData}/></ProGate>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M}}>
-                      <span>Earlier ←</span><span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
-                    </div>
-                  </div>
-                  <div className="dp-sec">
-                    <span className="dp-lbl">EXPECTED VALUE</span>
-                    <div className="dp-2">
-                      <div className="dp-tile" style={{borderColor:p.evRatio>=1?"rgba(0,255,135,.2)":"rgba(255,56,96,.15)"}}>
-                        <span className="dp-tl">FMV EV</span>
-                        <div className="dp-tv" style={{color:evColor2}}>{$x(p.evRatio)}</div>
-                        <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(p.calEv??p.calibratedEv??0)} avg</div>
-                      </div>
-                      <div className="dp-tile" style={{borderColor:p.buybackEv>=1?"rgba(255,209,102,.2)":"rgba(255,56,96,.15)"}}>
-                        <span className="dp-tl">BUYBACK EV ★</span>
-                        <div className="dp-tv" style={{color:bbC}}>{$x(p.buybackEv)}</div>
-                        <div style={{fontSize:8,color:"#3a5068",marginTop:3,...M}}>{$f(cashOut)} cash</div>
-                      </div>
-                    </div>
-                    <div className="dp-2">
-                      <div className="dp-tile"><span className="dp-tl">WIN RATE</span><div className="dp-tv" style={{color:p.winRate>=.5?"#00ff87":"#3a5068"}}>{$p(p.winRate)}</div></div>
-                      <div className="dp-tile"><span className="dp-tl">AVG PULL VALUE</span><div className="dp-tv" style={{color:"#00ff87"}}>{$f(safeN(p.calEv??p.avgFmv))}</div></div>
-                    </div>
-                    <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
-                  </div>
-                  <div className="dp-sec">
-                    <span className="dp-lbl">💡 FEE BREAKDOWN — EXCLUSIVE</span>
-                    <table className="fee-t"><tbody>
-                      <tr><td>Advertised price</td><td style={{textAlign:"right" as const}}>{$f(p.price)}</td></tr>
-                      <tr><td style={{color:"#ff3860"}}>Payment markup (+7.4%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>{$f(trueCost)}</td></tr>
-                      <tr><td>Average FMV won</td><td style={{textAlign:"right" as const,color:evColor2}}>{$f(safeN(p.calEv??p.avgFmv))}</td></tr>
-                      <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right" as const}}>{$f((safeN(p.calEv??p.avgFmv))*0.9)}</td></tr>
-                      <tr><td style={{color:"#ff3860"}}>Processing fee (−6%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>−{$f((safeN(p.calEv??p.avgFmv))*0.9*0.06)}</td></tr>
-                      <tr className="tot"><td>💵 Cash in your hand</td><td style={{textAlign:"right" as const,color:bbC,fontSize:15}}>{$f(cashOut)}</td></tr>
-                    </tbody></table>
-                  </div>
-                  <a href={`https://courtyard.io/vending-machine/${p.id}`} target="_blank" rel="noreferrer"
-                    style={{display:"block",textAlign:"center" as const,padding:"12px",borderRadius:9,fontWeight:800,fontSize:14,textDecoration:"none",background:p.evRatio>=1?"#00ff87":"#0b1728",color:p.evRatio>=1?"#000":"#3a5068",border:p.evRatio>=1?"none":"1px solid #122038"}}>
-                    {p.evRatio>=1?"🟢 Pull This Pack on Courtyard →":"View on Courtyard →"}
-                  </a>
-                  <div style={{fontSize:8,color:"#3a5068",textAlign:"center" as const,...M,lineHeight:1.6}}>For informational purposes only. Not financial advice.</div>
-                </div>
-              </div>
-            );
-          })()):null)}
+          <DetailPanel
+            sel={sel} isPro={isPro} alerts={alerts}
+            histData={histData}
+            onClose={()=>setSel(null)}
+            onUpgrade={()=>setShowUpgrade(true)}
+            onToggleAlert={toggleAlert}
+          />
         </div>
       </div>
 
