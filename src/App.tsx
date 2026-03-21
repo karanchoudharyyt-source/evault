@@ -43,41 +43,100 @@ function urlBase64ToUint8Array(b64:string){
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
-function Spark({trend,color,w=64,h=20}:{trend:"up"|"down"|"flat";color:string;w?:number;h?:number}){
-  const pts=trend==="up"?`0,${h} ${w*.3},${h*.65} ${w*.65},${h*.3} ${w},${h*.05}`:
-            trend==="down"?`0,${h*.05} ${w*.3},${h*.3} ${w*.65},${h*.65} ${w},${h}`:
-            `0,${h*.52} ${w*.28},${h*.38} ${w*.55},${h*.57} ${w*.8},${h*.44} ${w},${h*.5}`;
-  const cy=trend==="up"?h*.05:trend==="down"?h:h*.5;
+// ─── EV History hook ─────────────────────────────────────────────────────────
+type HistPoint = {t:string;ev:number;buyback:number};
+type HistData  = Record<string,HistPoint[]>;
+
+function useEvHistory(){
+  const [data,setData]=useState<HistData>({});
+  useEffect(()=>{
+    const load=async()=>{
+      try{
+        const r=await fetch("/api/ev-history?hours=24");
+        if(r.ok){const j=await r.json();setData(j.data||{});}
+      }catch{}
+    };
+    load();
+    // Refresh every 2 minutes
+    const t=setInterval(load,120_000);
+    return()=>clearInterval(t);
+  },[]);
+  return data;
+}
+
+// Sparkline using real or fallback data
+function Spark({packId,trend,color,w=64,h=20,histData}:{packId:string;trend:"up"|"down"|"flat";color:string;w?:number;h?:number;histData:HistData}){
+  const hist=histData[packId];
+  let points:number[];
+  if(hist&&hist.length>=2){
+    points=hist.slice(-20).map(p=>p.ev);
+  } else {
+    const pts_str=trend==="up"?[1,0.65,0.3,0.05]:trend==="down"?[0.05,0.3,0.65,1]:[0.52,0.38,0.57,0.44,0.5];
+    points=pts_str.map(v=>v);
+  }
+  const mn=Math.min(...points),mx=Math.max(...points),rng=mx-mn||0.01;
+  const path=points.map((v,i)=>{
+    const x=(i/(points.length-1))*w;
+    const y=h-(v-mn)/rng*h;
+    return`${i===0?"M":"L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const lastY=h-(points[points.length-1]-mn)/rng*h;
   return(<svg width={w} height={h} style={{display:"block",flexShrink:0}}>
-    <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
-    <circle cx={w} cy={cy} r="2.5" fill={color}/>
+    <polyline points={points.map((v,i)=>`${(i/(points.length-1))*w},${h-(v-mn)/rng*h}`).join(" ")}
+      fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+    <circle cx={w} cy={lastY} r="2.5" fill={color}/>
   </svg>);
 }
 
-function EVChart({pack}:{pack:Pack}){
+// Full EV chart using real historical data
+function EVChart({pack,histData}:{pack:Pack;histData:HistData}){
   const color=evc(pack.evRatio);
-  const N=24,base=pack.evRatio;
-  const pts=Array.from({length:N},(_,i)=>{
-    const p=i/(N-1),noise=(Math.sin(i*2.1+1)*0.05+Math.cos(i*1.4)*0.03)*(1-p*0.3);
-    const tr=pack.trend==="up"?-0.18*(1-p):pack.trend==="down"?0.14*(1-p):0;
-    return Math.max(0.2,base+noise+tr);
-  });
-  const mn=Math.min(...pts)*0.96,mx=Math.max(...pts)*1.04,rng=mx-mn||0.1;
+  const hist=histData[pack.id];
   const W=290,H=88;
-  const tx=(i:number)=>i/(N-1)*W,ty=(v:number)=>H-(v-mn)/rng*H;
+
+  if(!hist||hist.length<2){
+    // Skeleton loader
+    return(<svg width={W} height={H} style={{display:"block"}}>
+      <rect width={W} height={H} fill="none"/>
+      <text x={W/2} y={H/2} textAnchor="middle" fontSize="9" fill="#1e3a50" fontFamily="monospace">
+        {hist?`1 data point — chart builds over time`:`Loading history...`}
+      </text>
+      <line x1="0" y1={H/2} x2={W} y2={H/2} stroke="#122038" strokeWidth="1" strokeDasharray="4,4"/>
+    </svg>);
+  }
+
+  // Downsample to max 60 points for performance
+  const step=Math.max(1,Math.floor(hist.length/60));
+  const pts=hist.filter((_,i)=>i%step===0||i===hist.length-1).map(p=>p.ev);
+  const mn=Math.min(...pts)*0.97,mx=Math.max(...pts)*1.03,rng=mx-mn||0.1;
+  const tx=(i:number)=>i/(pts.length-1)*W;
+  const ty=(v:number)=>H-(v-mn)/rng*H;
   const path=pts.map((v,i)=>`${i===0?"M":"L"}${tx(i).toFixed(1)},${ty(v).toFixed(1)}`).join(" ");
   const by=ty(1.0);
+
+  // Time labels
+  const firstT=new Date(hist[0].t);
+  const lastT=new Date(hist[hist.length-1].t);
+  const fmt=(d:Date)=>d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const spanH=Math.round((lastT.getTime()-firstT.getTime())/3_600_000);
+
   return(<svg width={W} height={H} style={{display:"block",overflow:"visible"}}>
-    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={color} stopOpacity=".2"/><stop offset="100%" stopColor={color} stopOpacity=".01"/>
-    </linearGradient></defs>
-    {by>2&&by<H-2&&<line x1="0" y1={by} x2={W} y2={by} stroke="rgba(255,255,255,.12)" strokeWidth="1" strokeDasharray="3,3"/>}
-    <path d={path+` L${W},${H} L0,${H} Z`} fill="url(#cg)"/>
+    <defs>
+      <linearGradient id={`cg-${pack.id}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity=".2"/>
+        <stop offset="100%" stopColor={color} stopOpacity=".01"/>
+      </linearGradient>
+    </defs>
+    {by>4&&by<H-4&&<line x1="0" y1={by} x2={W} y2={by} stroke="rgba(255,255,255,.12)" strokeWidth="1" strokeDasharray="3,3"/>}
+    <path d={path+` L${W},${H} L0,${H} Z`} fill={`url(#cg-${pack.id})`}/>
     <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-    <circle cx={tx(N-1)} cy={ty(pts[N-1])} r="3" fill={color}/>
-    <text x="3" y="11" fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mx.toFixed(2)}x</text>
-    <text x="3" y={H-2} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mn.toFixed(2)}x</text>
-    {by>8&&by<H-8&&<text x={W-28} y={by-3} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">1.0x</text>}
+    <circle cx={tx(pts.length-1)} cy={ty(pts[pts.length-1])} r="3" fill={color}/>
+    <text x="3" y="10" fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mx.toFixed(3)}x</text>
+    <text x="3" y={H-2} fontSize="7" fill="rgba(255,255,255,.25)" fontFamily="monospace">{mn.toFixed(3)}x</text>
+    {by>10&&by<H-10&&<text x={W-30} y={by-3} fontSize="7" fill="rgba(255,255,255,.3)" fontFamily="monospace">1.0x</text>}
+    <text x="3" y={H-2} fontSize="7" fill="rgba(255,255,255,.15)" fontFamily="monospace" dy="-1">{fmt(firstT)}</text>
+    <text x={W-3} y={H-2} fontSize="7" fill="rgba(255,255,255,.15)" fontFamily="monospace" textAnchor="end">{fmt(lastT)}</text>
+    <text x={W/2} y={H-2} fontSize="7" fill="rgba(255,255,255,.2)" fontFamily="monospace" textAnchor="middle">{spanH}h</text>
   </svg>);
 }
 
@@ -334,6 +393,7 @@ function AlertPanel({
 function Dashboard(){
   const {data,isLoading,refetch}=useCourtyardData();
   const [tab,setTab]          =useState("all");
+  const histData               =useEvHistory();
   const [view,setView]         =useState<"packs"|"feed"|"budget">("packs");
   const [alertsOpen,setAlertsOpen]=useState(false);
   const [sort,setSort]         =useState<"ev"|"bb"|"decision"|"wr"|"price">("ev");
@@ -757,7 +817,7 @@ function Dashboard(){
                           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                             <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd}}>{sg.label}</span>
                             <div style={{display:"flex",alignItems:"center",gap:6}}>
-                              <Spark trend={pack.trend} color={evColor2}/>
+                              <Spark packId={pack.id} trend={pack.trend} color={evColor2} histData={histData}/>
                               <a href={`https://courtyard.io/vending-machine/${pack.id}`} target="_blank" rel="noreferrer"
                                 onClick={(e)=>e.stopPropagation()}
                                 style={{padding:"3px 9px",border:"1px solid rgba(0,255,135,.25)",borderRadius:5,fontSize:9,color:"#00ff87",fontWeight:700,textDecoration:"none",...M}}>
@@ -894,7 +954,7 @@ function Dashboard(){
                   </div>
                   <div className="dp-sec">
                     <span className="dp-lbl">EV RATIO TREND · 1m</span>
-                    <EVChart pack={p}/>
+                    <EVChart pack={p} histData={histData}/>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M}}>
                       <span>Earlier ←</span><span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
                     </div>
