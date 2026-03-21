@@ -715,6 +715,27 @@ function DetailPanel({sel,isPro,alerts,histData,onClose,onUpgrade,onToggleAlert}
   );
 }
 
+// ─── BestPackCard — used in hero section ─────────────────────────────────────
+function BestPackCard({pack}:{pack:Pack}){
+  const M={fontFamily:"monospace"} as React.CSSProperties;
+  const sg=sig(pack.evRatio);
+  return(
+    <div style={{background:"#0b1728",border:"1px solid #122038",borderRadius:8,padding:"9px 12px",display:"flex",alignItems:"center",gap:11}}>
+      <img src={packImg(pack.id)} alt="" style={{width:36,height:50,objectFit:"contain",flexShrink:0}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:7,color:"#00ff87",letterSpacing:1.5,...M,fontWeight:700,marginBottom:3}}>BEST VALUE RIGHT NOW</div>
+        <div style={{fontWeight:800,fontSize:13,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,marginBottom:5}}>{pack.name}</div>
+        <div style={{display:"flex",gap:14}}>
+          {([["EV",$x(pack.evRatio),"#00ff87"],["CAL. EV",$f(pack.calEv??0),"#00ff87"],["BUYBACK",$x(pack.buybackEv),pack.buybackEv>=1?"#00ff87":"#ff3860"]] as [string,string,string][]).map(([l,v,c])=>(
+            <div key={l}><div style={{fontSize:7,color:"#3a5068",...M}}>{l}</div><div style={{fontWeight:800,fontSize:13,color:c,...M}}>{v}</div></div>
+          ))}
+        </div>
+      </div>
+      <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
+    </div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard(){
   const {data,isLoading,refetch}=useCourtyardData();
@@ -1095,21 +1116,7 @@ function Dashboard(){
                       <div style={{fontSize:9,color:"#3a5068",marginTop:3}}>{s.s}</div>
                     </div>
                   ))}
-                  {best&&(()=>{const sg=sig(best.evRatio);return(
-                    <div style={{background:"#0b1728",border:"1px solid #122038",borderRadius:8,padding:"9px 12px",display:"flex",alignItems:"center",gap:11}}>
-                      <img src={packImg(best.id)} alt="" style={{width:36,height:50,objectFit:"contain",flexShrink:0}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:7,color:"#00ff87",letterSpacing:1.5,...M,fontWeight:700,marginBottom:3}}>BEST VALUE RIGHT NOW</div>
-                        <div style={{fontWeight:800,fontSize:13,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,marginBottom:5}}>{best.name}</div>
-                        <div style={{display:"flex",gap:14}}>
-                          {[["EV",$x(best.evRatio),"#00ff87"],["CAL. EV",$f(best.calEv??best.calibratedEv??0),"#00ff87"],["BUYBACK",$x(best.buybackEv),best.buybackEv>=1?"#00ff87":"#ff3860"]].map(([l,v,c])=>(
-                            <div key={l as string}><div style={{fontSize:7,color:"#3a5068",...M}}>{l}</div><div style={{fontWeight:800,fontSize:13,color:c as string,...M}}>{v}</div></div>
-                          ))}
-                        </div>
-                      </div>
-                      <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
-                    </div>
-                  );})()
+                  {best&&<BestPackCard pack={best}/>}
                 </div>
               </div>
 
