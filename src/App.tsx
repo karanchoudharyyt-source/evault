@@ -591,7 +591,7 @@ function DetailPanel({sel,isPro,alerts,histData,onClose,onUpgrade,onToggleAlert}
           style={{width:"100%",maxWidth:260,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
           ⚡ Unlock for $19/mo →
         </button>
-        <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime</div>
+        <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>$19/mo founding rate · First 25 users · Cancel anytime</div>
       </div>
     </div>
   );
@@ -1196,17 +1196,31 @@ function Dashboard(){
 
           {/* ═══ BUDGET ADVISOR ═══ */}
           {data&&view==="budget"&&(!isPro?(
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32,textAlign:"center" as const}}>
-              <div style={{fontSize:48}}>💰</div>
-              <div style={{fontWeight:800,fontSize:20,color:"#fff",marginBottom:4}}>Budget Advisor is Pro</div>
-              <div style={{fontSize:13,color:"#3a5068",maxWidth:360,lineHeight:1.6,marginBottom:8}}>
-                Tell us your budget and we instantly find the best pack by real buyback EV — the actual cash you'd get after ALL fees. Never overpay again.
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,padding:24,textAlign:"center" as const}}>
+              <div style={{fontWeight:800,fontSize:18,color:"#fff"}}>Budget Advisor is Pro</div>
+              <div style={{fontSize:12,color:"#3a5068",maxWidth:320,lineHeight:1.6}}>
+                Tell us your budget — we instantly find the best pack by real buyback EV. The actual cash in your hand after every fee.
               </div>
+              {([
+                {e:"💰",t:"Best pack per budget",d:"Ranked by real cash"},
+                {e:"🎯",t:"Buyback EV",d:"After all fees"},
+                {e:"⚡",t:"BUY/WAIT/SKIP",d:"Instant signal"},
+                {e:"💡",t:"Fee breakdown",d:"Full cost exposed"},
+              ] as {e:string;t:string;d:string}[]).map(f=>(
+                <div key={f.t} style={{display:"flex",gap:10,alignItems:"center",width:"100%",maxWidth:280,textAlign:"left" as const,background:"#0b1728",border:"1px solid #122038",borderRadius:8,padding:"8px 12px"}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{f.e}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:11,color:"#fff"}}>{f.t}</div>
+                    <div style={{fontSize:9,color:"#3a5068"}}>{f.d}</div>
+                  </div>
+                  <span style={{color:"#00ff87",fontSize:11}}>✓</span>
+                </div>
+              ))}
               <button onClick={()=>setShowUpgrade(true)}
-                style={{padding:"12px 32px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:14,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
-                ⚡ Unlock Budget Advisor →
+                style={{width:"100%",maxWidth:280,padding:"12px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:13,color:"#000",cursor:"pointer",fontFamily:"monospace",marginTop:4}}>
+                ⚡ Unlock for $19/mo →
               </button>
-              <div style={{fontSize:10,color:"#3a5068",fontFamily:"monospace"}}>From $19/mo · Cancel anytime</div>
+              <div style={{fontSize:9,color:"#3a5068",fontFamily:"monospace"}}>First 25 users · Cancel anytime · 7-day refund</div>
             </div>
           ):(
             <div style={{flex:1,overflowY:"auto",padding:16}}>
