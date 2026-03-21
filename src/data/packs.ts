@@ -1,31 +1,43 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface Pack {
   id: string;
-  slug: string;
+  slug?: string;
   name: string;
   category: string;
+  categoryTitle?: string;
+  categoryColor?: string;
+  categoryOrder?: number;
   price: number;
   evRatio: number;
-  calibratedEv: number;
+  calibratedEv?: number;
+  calEv?: number;
   buybackEv: number;
   winRate: number;
-  avgFmv: number;
-  bestPull: number;
-  totalPulls: number;
+  avgFmv?: number;
+  bestPull?: number;
+  totalPulls?: number;
+  pullCount?: number;
   trend: "up" | "down" | "flat";
-  lastUpdated: string;
+  lastUpdated?: string;
+  hasData?: boolean;
 }
 
 export interface PullRecord {
   id: string;
   packName: string;
-  cardName: string;
-  user: string;
+  packId?: string;
+  cardName?: string;
+  user?: string;
+  buyer?: string;
   fmv: number;
-  packPrice: number;
-  grader: string;
-  grade: string;
-  timestamp: string;
+  delta?: number;
+  packPrice?: number;
+  grader?: string;
+  grade?: string;
+  image?: string;
+  title?: string;
+  txTime?: string;
+  timestamp?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
