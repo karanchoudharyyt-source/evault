@@ -13,9 +13,10 @@ const CAT_COLOR: Record<string,string> = {
   Sports:"#9f7aea",Magic:"#e040fb",Comics:"#ff5252",Watch:"#b0bec5",
 };
 
-const $f=(n:number)=>`$${(+n).toFixed(2)}`;
-const $x=(n:number)=>`${(+n).toFixed(3)}x`;
-const $p=(n:number)=>`${(+n*100).toFixed(1)}%`;
+const $f=(n:number|undefined)=>`$${(isNaN(+(n??0))?0:+(n??0)).toFixed(2)}`;
+const $x=(n:number|undefined)=>`${(isNaN(+(n??0))?0:+(n??0)).toFixed(3)}x`;
+const $p=(n:number|undefined)=>`${(isNaN(+(n??0))?0:+(n??0)*100).toFixed(1)}%`;
+const safeN=(n:number|undefined):number=>isNaN(+(n??0))?0:+(n??0);
 const packImg=(id:string)=>`https://api.courtyard.io/configs/vending-machine/${id}/resources/sealed_pack.png`;
 function ago(ts:string){const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);return s<60?`${s}s`:s<3600?`${Math.floor(s/60)}m`:`${Math.floor(s/3600)}h`;}
 
@@ -567,6 +568,15 @@ function Dashboard(){
   },[refetch]);
 
   const cats=data?["all",...Array.from(new Set(data.packs.map(p=>p.category)))] :["all"];
+  const catLabel=(c:string)=>{
+    if(c==="all") return "All";
+    // Use categoryTitle from pack if available
+    const pack=data?.packs.find(p=>p.category===c);
+    if(pack?.categoryTitle) return pack.categoryTitle;
+    // Fallback mapping
+    const m:Record<string,string>={pkmn:"Pokémon",magic_the_gathering:"Magic",limited_drop:"Limited",sports:"Sports",comics:"Comics",onepiece:"One Piece",wildcard:"Wildcard",watches:"Watches"};
+    return m[c]??c.charAt(0).toUpperCase()+c.slice(1);
+  };
   const decScore=(p:Pack)=>{const d=dec(p);return d.action.includes("STRONG")?6:d.action.includes("✅")?5:d.action.includes("⚡")?4:d.action.includes("MAYBE")?3:d.action.includes("WAIT")?2:1;};
   const rows:Pack[]=data?[...data.packs].filter(p=>tab==="all"||p.category===tab).filter(p=>flt==="pos"?p.evRatio>=1:flt==="neg"?p.evRatio<1:true).sort((a,b)=>sort==="ev"?b.evRatio-a.evRatio:sort==="bb"?b.buybackEv-a.buybackEv:sort==="decision"?decScore(b)-decScore(a):sort==="wr"?b.winRate-a.winRate:a.price-b.price):[];
   const best=data?.packs[0];
@@ -678,7 +688,7 @@ function Dashboard(){
               <button key={c} className={`sb-btn${active?" on":""}`} onClick={()=>{setTab(c);setView("packs");}}
                 style={{borderLeftColor:active?color:"transparent",background:active?"rgba(255,255,255,.025)":"transparent",color:active?"#c8dff0":"#3a5068"}}>
                 <span style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0,display:"inline-block"}}/>
-                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>{c==="all"?"All Markets":c}</span>
+                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>{c==="all"?"All Markets":catLabel(c)}</span>
                 {buyN>0&&<span style={{flexShrink:0,fontSize:8,fontWeight:700,color:"#00ff87",background:"rgba(0,255,135,.08)",padding:"1px 4px",borderRadius:3,...M}}>{buyN}↑</span>}
               </button>
             );
@@ -801,7 +811,7 @@ function Dashboard(){
                             <div style={{background:"#060d18",borderRadius:6,padding:"7px 9px",border:`1px solid ${pack.buybackEv>=1?"rgba(255,209,102,.15)":"rgba(255,56,96,.1)"}`}}>
                               <div style={{fontSize:7,color:"#ffd166",...M,marginBottom:2}}>BUYBACK EV ★</div>
                               <div style={{fontWeight:800,fontSize:20,color:bbC,lineHeight:1,...M}}>{$x(pack.buybackEv)}</div>
-                              <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>≈{$f(pack.avgFmv*0.846)} cash</div>
+                              <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>≈{$f((pack.calEv??pack.avgFmv??0)*0.846)} cash</div>
                             </div>
                           </div>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -871,7 +881,7 @@ function Dashboard(){
                       </div>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-                      {[["EV RATIO",$x(top.evRatio),top.evRatio>=1?"#00ff87":"#ff3860"],["BUYBACK EV",$x(top.buybackEv),top.buybackEv>=1?"#00ff87":"#ff3860"],["CASH OUT",$f(top.avgFmv*0.846),top.buybackEv>=1?"#00ff87":"#ff3860"],["WIN RATE",$p(top.winRate),top.winRate>=.5?"#00ff87":"#3a5068"]].map(([l,v,c])=>(
+                      {[["EV RATIO",$x(top.evRatio),top.evRatio>=1?"#00ff87":"#ff3860"],["BUYBACK EV",$x(top.buybackEv),top.buybackEv>=1?"#00ff87":"#ff3860"],["CASH OUT",$f((top.calEv??top.avgFmv??0)*0.846),top.buybackEv>=1?"#00ff87":"#ff3860"],["WIN RATE",$p(top.winRate),top.winRate>=.5?"#00ff87":"#3a5068"]].map(([l,v,c])=>(
                         <div key={l as string} style={{background:"#060d18",borderRadius:7,padding:"8px 10px",border:"1px solid #122038"}}>
                           <div style={{fontSize:7,color:"#3a5068",...M,marginBottom:3}}>{l}</div>
                           <div style={{fontWeight:800,fontSize:16,color:c as string,...M}}>{v}</div>
@@ -942,7 +952,7 @@ function Dashboard(){
           {sel&&(()=>{
             const p=sel,d=dec(p),sg=sig(p.evRatio);
             const evColor2=evc(p.evRatio),bbC=p.buybackEv>=1?"#00ff87":"#ff3860";
-            const trueCost=p.price*1.074,cashOut=p.avgFmv*0.846;
+            const trueCost=p.price*1.074,cashOut=(safeN(p.calEv??p.avgFmv))*0.846;
             const hasAlert=alerts.has(p.id);
             return(
               <div className="si" style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
@@ -950,7 +960,7 @@ function Dashboard(){
                   <img src={packImg(p.id)} alt="" style={{width:28,height:40,objectFit:"contain"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none";}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
-                    <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
+                    <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.categoryTitle??p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
                   </div>
                   <button className={`bell${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)}>{hasAlert?"🔔":"🔕"}</button>
                   <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
@@ -984,7 +994,7 @@ function Dashboard(){
                     </div>
                     <div className="dp-2">
                       <div className="dp-tile"><span className="dp-tl">WIN RATE</span><div className="dp-tv" style={{color:p.winRate>=.5?"#00ff87":"#3a5068"}}>{$p(p.winRate)}</div></div>
-                      <div className="dp-tile"><span className="dp-tl">BEST PULL</span><div className="dp-tv" style={{color:"#00ff87"}}>{$f(p.bestPull)}</div></div>
+                      <div className="dp-tile"><span className="dp-tl">AVG PULL VALUE</span><div className="dp-tv" style={{color:"#00ff87"}}>{$f(safeN(p.calEv??p.avgFmv))}</div></div>
                     </div>
                     <span className="sig-badge" style={{color:sg.c,background:sg.bg,borderColor:sg.bd,alignSelf:"flex-start" as const}}>{sg.label}</span>
                   </div>
@@ -993,9 +1003,9 @@ function Dashboard(){
                     <table className="fee-t"><tbody>
                       <tr><td>Advertised price</td><td style={{textAlign:"right" as const}}>{$f(p.price)}</td></tr>
                       <tr><td style={{color:"#ff3860"}}>Payment markup (+7.4%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>{$f(trueCost)}</td></tr>
-                      <tr><td>Average FMV won</td><td style={{textAlign:"right" as const,color:evColor2}}>{$f(p.avgFmv)}</td></tr>
-                      <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right" as const}}>{$f(p.avgFmv*0.9)}</td></tr>
-                      <tr><td style={{color:"#ff3860"}}>Processing fee (−6%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>−{$f(p.avgFmv*0.9*0.06)}</td></tr>
+                      <tr><td>Average FMV won</td><td style={{textAlign:"right" as const,color:evColor2}}>{$f(safeN(p.calEv??p.avgFmv))}</td></tr>
+                      <tr><td>Buyback offer (×0.90)</td><td style={{textAlign:"right" as const}}>{$f((safeN(p.calEv??p.avgFmv))*0.9)}</td></tr>
+                      <tr><td style={{color:"#ff3860"}}>Processing fee (−6%)</td><td style={{textAlign:"right" as const,color:"#ff3860"}}>−{$f((safeN(p.calEv??p.avgFmv))*0.9*0.06)}</td></tr>
                       <tr className="tot"><td>💵 Cash in your hand</td><td style={{textAlign:"right" as const,color:bbC,fontSize:15}}>{$f(cashOut)}</td></tr>
                     </tbody></table>
                   </div>
