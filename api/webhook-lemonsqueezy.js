@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   if (eventName === 'subscription_created' || eventName === 'order_created') {
     // Determine tier by variant name or price
     const variantName = data?.variant_name?.toLowerCase() ?? '';
-    const plan = variantName.includes('founding') ? 'founding' : 'standard';
+    const plan = variantName.includes('early') ? 'early' : variantName.includes('growth') ? 'growth' : 'standard';
 
     await updateClerkPlan(clerkUserId, plan);
     await updateUser(clerkUserId, {
