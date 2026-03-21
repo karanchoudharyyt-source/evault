@@ -597,12 +597,16 @@ function Dashboard(){
           <div style={{flex:1,overflow:"hidden"}}>
             <div className="ticker-track">
               {[...data.recentPulls,...data.recentPulls].map((p,i)=>{
-                const win=p.fmv>p.packPrice;
+                const name=p.buyer??p.user??"anon";
+                const title=p.title??p.cardName??"";
+                const fmv=p.fmv??0;
+                const packPrice=p.packPrice??50;
+                const win=fmv>packPrice;
                 return(<div key={`${p.id}-${i}`} className="ticker-item">
-                  <span style={{color:"#3a5068",fontSize:9}}>@{p.user}</span>
-                  <span style={{color:"#c8dff0",fontWeight:600}}>{p.cardName.slice(0,20)}</span>
-                  <span style={{color:win?"#00ff87":"#ff3860",fontWeight:800}}>{$f(p.fmv)}</span>
-                  <span style={{color:win?"rgba(0,255,135,.5)":"rgba(255,56,96,.5)",fontSize:9}}>({win?"+":""}{$f(p.fmv-p.packPrice)})</span>
+                  <span style={{color:"#3a5068",fontSize:9}}>@{name}</span>
+                  <span style={{color:"#c8dff0",fontWeight:600}}>{title.slice(0,20)}</span>
+                  <span style={{color:win?"#00ff87":"#ff3860",fontWeight:800}}>{$f(fmv)}</span>
+                  <span style={{color:win?"rgba(0,255,135,.5)":"rgba(255,56,96,.5)",fontSize:9}}>({win?"+":""}{$f(fmv-packPrice)})</span>
                 </div>);
               })}
             </div>
@@ -723,7 +727,7 @@ function Dashboard(){
                         <div style={{fontSize:7,color:"#00ff87",letterSpacing:1.5,...M,fontWeight:700,marginBottom:3}}>BEST VALUE RIGHT NOW</div>
                         <div style={{fontWeight:800,fontSize:13,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,marginBottom:5}}>{best.name}</div>
                         <div style={{display:"flex",gap:14}}>
-                          {[["EV",$x(best.evRatio),"#00ff87"],["CAL. EV",$f(best.calibratedEv),"#00ff87"],["BUYBACK",$x(best.buybackEv),best.buybackEv>=1?"#00ff87":"#ff3860"]].map(([l,v,c])=>(
+                          {[["EV",$x(best.evRatio),"#00ff87"],["CAL. EV",$f(best.calEv??best.calibratedEv??0),"#00ff87"],["BUYBACK",$x(best.buybackEv),best.buybackEv>=1?"#00ff87":"#ff3860"]].map(([l,v,c])=>(
                             <div key={l as string}><div style={{fontSize:7,color:"#3a5068",...M}}>{l}</div><div style={{fontWeight:800,fontSize:13,color:c as string,...M}}>{v}</div></div>
                           ))}
                         </div>
@@ -901,25 +905,30 @@ function Dashboard(){
             <div style={{flex:1,overflowY:"auto",padding:10,display:"flex",flexDirection:"column",gap:6}}>
               <div style={{padding:"4px 2px 6px",fontSize:11,color:"#3a5068"}}>{data.recentPulls.length} most recent pulls from Courtyard.io</div>
               {(data.recentPulls as PullRecord[]).map(pull=>{
-                const win=pull.fmv>pull.packPrice,diff=pull.fmv-pull.packPrice;
-                const hue=pull.buyer??pull.user.split("").reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+                const name=pull.buyer??pull.user??"anon";
+                const fmv=pull.fmv??0;
+                const packPrice=pull.packPrice??50;
+                const win=fmv>packPrice,diff=fmv-packPrice;
+                const hue=name.split("").reduce((a:number,c:string)=>a+c.charCodeAt(0),0)%360;
+                const displayTitle=pull.title??pull.cardName??pull.packName??"";
+                const timeStr=pull.txTime??pull.timestamp??"";
                 return(
                   <div key={pull.id} className="feed-card">
                     <div style={{width:30,height:30,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,background:`hsl(${hue},25%,10%)`,border:`1px solid hsl(${hue},25%,18%)`,color:`hsl(${hue},40%,55%)`,...M}}>
-                      {pull.buyer??pull.user.slice(0,2).toUpperCase()}
+                      {name.slice(0,2).toUpperCase()}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap" as const}}>
-                        <span style={{fontSize:11,fontWeight:700,color:"#00cc6a"}}>@{pull.buyer??pull.user}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:"#00cc6a"}}>@{name}</span>
                         <span style={{fontSize:9,color:"#3a5068",padding:"1px 5px",background:"#0b1728",border:"1px solid #122038",borderRadius:3,...M}}>{pull.packName}</span>
-                        <span style={{fontSize:9,color:"#3a5068",marginLeft:"auto",...M}}>{ago(pull.timestamp)} ago</span>
+                        {timeStr&&<span style={{fontSize:9,color:"#3a5068",marginLeft:"auto",...M}}>{ago(timeStr)} ago</span>}
                       </div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{pull.cardName}</div>
-                      {pull.grade&&<div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>{pull.grader} {pull.grade}</div>}
+                      <div style={{fontSize:13,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{displayTitle}</div>
+                      {pull.grade&&<div style={{fontSize:9,color:"#3a5068",marginTop:2,...M}}>{pull.grade}</div>}
                     </div>
                     <div style={{textAlign:"right" as const,flexShrink:0}}>
-                      <div style={{fontWeight:800,fontSize:14,color:win?"#00ff87":"#3a5068",...M}}>{$f(pull.fmv)}</div>
-                      <div style={{fontSize:9,color:win?"#00cc6a":"#ff3860",marginTop:2,...M}}>{win?"+":""}{$f(diff)}</div>
+                      <div style={{fontWeight:800,fontSize:14,color:fmv>0?(win?"#00ff87":"#3a5068"):"#3a5068",...M}}>{fmv>0?$f(fmv):"—"}</div>
+                      {fmv>0&&<div style={{fontSize:9,color:win?"#00cc6a":"#ff3860",marginTop:2,...M}}>{win?"+":""}{$f(diff)}</div>}
                     </div>
                   </div>
                 );
