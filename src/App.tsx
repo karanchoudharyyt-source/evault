@@ -99,134 +99,85 @@ function UpgradeModal({onClose}:{onClose:()=>void}){
   const tm = tierMap[tier] ?? tierMap.founding;
 
   return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px 12px",overflowY:"auto"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"#07101f",border:"1px solid #1a2f45",borderRadius:18,width:"100%",maxWidth:460,overflow:"hidden",position:"relative"}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"12px"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#07101f",border:"1px solid #1a2f45",borderRadius:16,width:"100%",maxWidth:400,maxHeight:"92vh",overflowY:"auto",position:"relative"}}>
 
-        {/* ── Close ── */}
-        <button onClick={onClose} style={{position:"absolute",top:14,right:14,all:"unset" as any,cursor:"pointer",color:"#3a5068",fontSize:18,lineHeight:1,zIndex:1}}>✕</button>
-
-        {/* ── Hero ── */}
-        <div style={{padding:"24px 24px 18px",background:"linear-gradient(180deg,rgba(0,255,135,.06) 0%,transparent 100%)"}}>
-          <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(0,255,135,.1)",border:"1px solid rgba(0,255,135,.2)",borderRadius:20,padding:"3px 10px",marginBottom:12}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:"#00ff87",display:"inline-block"}}/>
-            <span style={{fontSize:9,color:"#00ff87",fontWeight:700,...M,letterSpacing:1}}>PACKPULSE PRO</span>
+        {/* ── Header row ── */}
+        <div style={{padding:"16px 18px 12px",borderBottom:"1px solid #0e1e30",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:"#07101f",zIndex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:"#00ff87",display:"inline-block"}}/>
+            <span style={{fontSize:10,color:"#00ff87",fontWeight:700,...M,letterSpacing:.5}}>PACKPULSE PRO</span>
           </div>
-          <div style={{fontWeight:800,fontSize:24,color:"#fff",lineHeight:1.1,marginBottom:6}}>
-            Stop buying packs <span style={{color:"#00ff87"}}>blind.</span>
-          </div>
-          <div style={{fontSize:12,color:"#3a5068",lineHeight:1.6}}>
-            The math Courtyard doesn't show you. Real cash, real signals, real edge.
-          </div>
+          <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",fontSize:16,lineHeight:1}}>✕</button>
         </div>
 
-        {/* ── Price block ── */}
-        <div style={{margin:"0 18px 16px",background:"#0b1728",border:"1px solid #1a2f45",borderRadius:12,padding:"16px 18px"}}>
-          {/* Tier badge */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-            <span style={{fontSize:9,fontWeight:700,color:"#ffd166",background:"rgba(255,209,102,.1)",border:"1px solid rgba(255,209,102,.2)",borderRadius:20,padding:"3px 9px",...M}}>
-              {tm.label}
-            </span>
-            {isFounding&&<span style={{fontSize:9,color:"#3a5068",...M}}>🔒 locked for life</span>}
-          </div>
-
-          {/* Price row */}
-          <div style={{display:"flex",alignItems:"flex-end",gap:6,marginBottom:isFounding?10:4}}>
-            <span style={{fontWeight:800,fontSize:44,color:"#00ff87",lineHeight:1,...M}}>${Math.round(price)}</span>
-            <div style={{marginBottom:6}}>
-              <div style={{fontSize:13,color:"#3a5068"}}>/month</div>
-              {isFounding&&<div style={{fontSize:10,color:"#3a5068",textDecoration:"line-through"}}>$29/mo after</div>}
+        {/* ── Price + bar ── */}
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #0e1e30"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <span style={{fontWeight:800,fontSize:38,color:"#00ff87",lineHeight:1,...M}}>${Math.round(price)}</span>
+            <div>
+              <div style={{fontSize:11,color:"#3a5068"}}>/month</div>
+              {isFounding&&<div style={{fontSize:9,color:"#ffd166",...M}}>FOUNDING — locked for life</div>}
             </div>
-            <div style={{marginLeft:"auto",textAlign:"right" as const}}>
-              <div style={{fontSize:10,color:"#3a5068"}}>save yearly</div>
-              <div style={{fontSize:16,fontWeight:800,color:"#00ff87",...M}}>${Math.round((29-price)*12)}</div>
-            </div>
+            {isFounding&&<div style={{marginLeft:"auto",background:"rgba(255,209,102,.08)",border:"1px solid rgba(255,209,102,.2)",borderRadius:8,padding:"5px 10px",textAlign:"center" as const}}>
+              <div style={{fontSize:8,color:"#3a5068",...M}}>NEXT PRICE</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#ffd166",...M}}>$29/mo</div>
+            </div>}
           </div>
-
-          {/* Founding bar */}
           {isFounding&&(
             <>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:5,...M}}>
-                <span style={{color:"#3a5068"}}>{filled} of 25 founding spots claimed</span>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:4,...M}}>
+                <span style={{color:"#3a5068"}}>{filled}/25 founding spots claimed</span>
                 <span style={{color:remaining<=5?"#ff3860":"#ffd166",fontWeight:700}}>{remaining} left</span>
               </div>
-              <div style={{height:5,background:"#122038",borderRadius:3,overflow:"hidden",marginBottom:6}}>
-                <div style={{height:"100%",width:`${pct}%`,background:"#00ff87",borderRadius:3,transition:"width .5s"}}/>
-              </div>
-              <div style={{fontSize:9,color:"#3a5068",...M}}>
-                Price rises to <span style={{color:"#ffd166"}}>$29/mo</span> after 25 founding members. Lock in $19 forever.
+              <div style={{height:4,background:"#122038",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:"#00ff87",borderRadius:2}}/>
               </div>
             </>
           )}
         </div>
 
-        {/* ── What you unlock ── */}
-        <div style={{padding:"0 18px 14px"}}>
-          <div style={{fontSize:9,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:10}}>WHAT YOU UNLOCK</div>
-          <div style={{display:"flex",flexDirection:"column" as const,gap:0}}>
+        {/* ── Features 2-col grid ── */}
+        <div style={{padding:"12px 18px",borderBottom:"1px solid #0e1e30"}}>
+          <div style={{fontSize:8,color:"#3a5068",letterSpacing:1.5,...M,marginBottom:8}}>WHAT YOU UNLOCK</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
             {[
-              {icon:"🎯",color:"rgba(0,255,135,.08)",name:"Buyback EV — real cash after ALL fees",desc:"The actual dollar in your hand. Not just FMV — after Courtyard's 10% cut + 6% processing fee. The number that actually matters."},
-              {icon:"⚡",color:"rgba(255,209,102,.08)",name:"Decision engine — STRONG BUY / BUY / WAIT / SKIP",desc:"A data-backed signal on every single pack. Stop guessing. Strong Buy = you statistically profit after every fee."},
-              {icon:"📈",color:"rgba(79,143,255,.08)",name:"EV history charts — TradingView style",desc:"See when a pack's EV shifted. Know if right now is the peak — or if you should wait 2 hours for better odds."},
-              {icon:"🔔",color:"rgba(255,56,96,.08)",name:"Push alerts — even when your browser is closed",desc:"Server checks every 30s. The moment a pack hits 1.2x+ buyback EV, you get notified. Most trackers charge $49/mo for this feature alone."},
-              {icon:"💰",color:"rgba(159,114,234,.08)",name:"Budget Advisor + full fee breakdown",desc:"Best pack for any budget by real cash. Plus the complete fee breakdown Courtyard buries in the fine print."},
-              {icon:"📊",color:"rgba(0,229,255,.08)",name:"Full pull feed — 50 real pulls",desc:"See what people are actually pulling right now. Not just 5 — all 50 live pulls with card images, grades, and FMV."},
+              {icon:"🎯",name:"Buyback EV",desc:"Real cash after all fees"},
+              {icon:"⚡",name:"BUY/WAIT/SKIP",desc:"Data-backed signal every pack"},
+              {icon:"📈",name:"EV Charts",desc:"TradingView-style history"},
+              {icon:"🔔",name:"Push Alerts",desc:"Works when browser is closed"},
+              {icon:"💰",name:"Budget Advisor",desc:"Best pack for your budget"},
+              {icon:"📊",name:"Full Pull Feed",desc:"All 50 live pulls + images"},
             ].map((f,i)=>(
-              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 0",borderBottom:i<5?"1px solid #0e1e30":"none"}}>
-                <div style={{width:30,height:30,borderRadius:7,background:f.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>
-                  {f.icon}
+              <div key={i} style={{background:"#0b1728",border:"1px solid #122038",borderRadius:8,padding:"8px 10px",display:"flex",gap:7,alignItems:"flex-start"}}>
+                <span style={{fontSize:14,flexShrink:0}}>{f.icon}</span>
+                <div style={{minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:10,color:"#fff",marginBottom:1}}>{f.name}</div>
+                  <div style={{fontSize:9,color:"#3a5068",lineHeight:1.3}}>{f.desc}</div>
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:11,color:"#fff",marginBottom:2}}>{f.name}</div>
-                  <div style={{fontSize:10,color:"#3a5068",lineHeight:1.5}}>{f.desc}</div>
-                </div>
-                <span style={{color:"#00ff87",fontSize:13,flexShrink:0,marginTop:2}}>✓</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Value stats ── */}
-        <div style={{margin:"0 18px 16px",background:"#060d18",border:"1px solid #122038",borderRadius:10,padding:"10px 14px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1px 1fr 1px 1fr",gap:8,alignItems:"center"}}>
-            {[
-              {label:"PACKS TRACKED",value:"51",sub:"all Courtyard packs"},
-              {label:"UPDATE SPEED",value:"30s",sub:"live market data"},
-              {label:"ALERT DELAY",value:"<1min",sub:"fastest on market"},
-            ].map((s,i)=>(
-              <>
-                {i>0&&<div key={`sep${i}`} style={{width:1,height:36,background:"#122038"}}/>}
-                <div key={s.label} style={{textAlign:"center" as const}}>
-                  <div style={{fontSize:9,color:"#3a5068",...M,marginBottom:3}}>{s.label}</div>
-                  <div style={{fontSize:18,fontWeight:800,color:"#00ff87",...M}}>{s.value}</div>
-                  <div style={{fontSize:8,color:"#3a5068",marginTop:2}}>{s.sub}</div>
-                </div>
-              </>
-            ))}
-          </div>
-        </div>
-
         {/* ── CTA ── */}
-        <div style={{padding:"0 18px 22px"}}>
+        <div style={{padding:"14px 18px"}}>
           {user?(
             <button onClick={handleUpgrade} disabled={loading}
-              style={{width:"100%",padding:"15px",background:loading?"#1a2a3a":"#00ff87",color:"#000",border:"none",borderRadius:11,fontWeight:800,fontSize:15,cursor:loading?"not-allowed":"pointer",...M,marginBottom:8}}>
-              {loading?"Redirecting to checkout...":isFounding?`Lock In $${Math.round(price)}/mo Founding Rate →`:`Get Pro Access — $${Math.round(price)}/mo →`}
+              style={{width:"100%",padding:"13px",background:loading?"#1a2a3a":"#00ff87",color:"#000",border:"none",borderRadius:10,fontWeight:800,fontSize:14,cursor:loading?"not-allowed":"pointer",...M,marginBottom:10}}>
+              {loading?"Redirecting...":isFounding?`Lock In $${Math.round(price)}/mo →`:`Get Pro — $${Math.round(price)}/mo →`}
             </button>
           ):(
             <SignInButton mode="modal" forceRedirectUrl="/?upgrade=1">
-              <button style={{width:"100%",padding:"15px",background:"#00ff87",color:"#000",border:"none",borderRadius:11,fontWeight:800,fontSize:15,cursor:"pointer",...M,marginBottom:8}}>
-                Sign In to Get Pro Access →
+              <button style={{width:"100%",padding:"13px",background:"#00ff87",color:"#000",border:"none",borderRadius:10,fontWeight:800,fontSize:14,cursor:"pointer",...M,marginBottom:10}}>
+                Sign In to Upgrade →
               </button>
             </SignInButton>
           )}
-          {/* Trust signals */}
-          <div style={{display:"flex",justifyContent:"center",gap:16,flexWrap:"wrap" as const}}>
-            {["✓ Cancel anytime","✓ Instant access","✓ 7-day refund"].map(t=>(
-              <span key={t} style={{fontSize:9,color:"#3a5068",...M}}>{t}</span>
-            ))}
-          </div>
-          <div style={{textAlign:"center" as const,marginTop:8,fontSize:9,color:"#1e3a50",...M}}>
-            Secured by Lemon Squeezy · Not affiliated with Courtyard.io
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#3a5068",...M}}>
+            <span>✓ Cancel anytime</span>
+            <span>✓ Instant access</span>
+            <span>✓ 7-day refund</span>
           </div>
         </div>
       </div>
