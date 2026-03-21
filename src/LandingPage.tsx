@@ -2,432 +2,441 @@ import { useEffect, useRef, useState } from "react";
 import { SignInButton, useUser } from "@clerk/clerk-react";
 
 const TICKER_ITEMS = [
-  { user:"@silverdestiny4121", card:"2024 Charizard ex SAR",         fmv:1240, pack:"Pokémon Master",  win:true  },
-  { user:"@callyh101992",     card:"2024 Dialga G Crosshatch",       fmv:180,  pack:"Pokémon Pro",     win:true  },
-  { user:"@bhuson7",          card:"2021 PSA 10 Mike Trout",         fmv:890,  pack:"Baseball Master", win:true  },
-  { user:"@trustmrr",         card:"2019 Zion Williamson RC",        fmv:420,  pack:"Basketball Pro",  win:true  },
-  { user:"@ferociouspave9385",card:"2020 Patrick Mahomes Gold",      fmv:310,  pack:"Football Master", win:true  },
-  { user:"@wisefate2286",     card:"2022 Pokémon Sword & Shield",    fmv:67,   pack:"Pokémon Starter", win:false },
-  { user:"@infernalcolos3255",card:"1999 Base Set Charizard Holo",   fmv:4200, pack:"Pokémon Legend",  win:true  },
-  { user:"@jhome13",          card:"2024 One Piece Law Alt Art",     fmv:280,  pack:"One Piece Master",win:true  },
-  { user:"@limitedanime7838", card:"Magic: The Gathering Final FF",  fmv:6,    pack:"MTG Sealed",     win:false },
-  { user:"@cy_backz",         card:"2022 Shohei Ohtani PSA 10",     fmv:650,  pack:"Baseball Ultra",  win:true  },
-];
-
-const REAL_PULLS = [
-  { card:"Houndoom Aquapolis",   price:1089, pack:"$99 pack",  img:"https://static.courtyard.io/graded-cards-renders/PSA%20132189300/render_front.webp" },
-  { card:"Dialga G Crosshatch",  price:160,  pack:"$100 pack", img:"https://static.courtyard.io/graded-cards-renders/BGS%2046126820/render_front.webp" },
-  { card:"Pheromosa & Buzzwole", price:113,  pack:"$50 pack",  img:"https://static.courtyard.io/graded-cards-renders/PSA%20132117882/render_front.webp" },
-  { card:"Mew Galarian Gallery", price:110,  pack:"$50 pack",  img:"https://static.courtyard.io/graded-cards-renders/PSA%20131988773/render_front.webp" },
-  { card:"Zacian V Full Art",    price:86,   pack:"$50 pack",  img:"https://static.courtyard.io/graded-cards-renders/PSA%20131988769/render_front.webp" },
+  { pack:"Pokémon Pro Pack",       ev:"2.686", signal:"BUY",        pos:true  },
+  { pack:"Basketball Starter",     ev:"1.376", signal:"BUY",        pos:true  },
+  { pack:"Pokémon Platinum Pack",  ev:"1.663", signal:"STRONG BUY", pos:true  },
+  { pack:"Baseball Master Pack",   ev:"1.210", signal:"BUY",        pos:true  },
+  { pack:"Pokémon Starter Pack",   ev:"0.986", signal:"WAIT",       pos:false },
+  { pack:"Magic Booster",          ev:"1.094", signal:"BUY",        pos:true  },
+  { pack:"One Piece Master Pack",  ev:"1.240", signal:"BUY",        pos:true  },
+  { pack:"Football Pro Pack",      ev:"1.288", signal:"BUY",        pos:true  },
+  { pack:"Lucky Legends Pack",     ev:"0.967", signal:"WAIT",       pos:false },
+  { pack:"Wildcard Master Pack",   ev:"3.240", signal:"STRONG BUY", pos:true  },
+  { pack:"Baseball Pro Pack",      ev:"1.180", signal:"BUY",        pos:true  },
+  { pack:"Sports Starter Pack",    ev:"0.840", signal:"WAIT",       pos:false },
 ];
 
 const FEATURES = [
-  { icon:"◈", title:"Live EV Ratio",        desc:"Real-time expected value calculated from 5M+ tracked pulls with exponential decay weighting. Not naive midpoints, real calibrated data.", accent:"#00ff87" },
-  { icon:"◉", title:"TradingView-Style Chart",desc:"Watch the EV ratio move like a stock ticker. Multiple timeframes from 1-minute to daily. See exactly when packs cross above or below break-even.", accent:"#4f8fff" },
-  { icon:"◆", title:"Buyback EV ★ Exclusive",desc:"The actual cash in your hand after Courtyard's 10% cut + 6% processing fee. Nobody else shows you this number. This is what actually matters.", accent:"#ffd166" },
-  { icon:"◇", title:"Pull Feed",             desc:"Live feed of recent pulls with card images, FMV values, and tier badges. See what's actually coming out of every pack right now.", accent:"#06d6a0" },
-  { icon:"⚡", title:"+EV Alerts",           desc:"Get notified when any pack crosses above 1.0x EV ratio. Buy when the math is in your favor — not when you feel lucky.", accent:"#ff6b6b" },
-  { icon:"◎", title:"Multi-Pack Rankings",   desc:"Compare all packs side by side. Instantly see which pack is the best value at any given moment across all 51 active packs.", accent:"#c77dff" },
+  { icon:"📊", name:"Live EV Ratio",            tag:"REAL-TIME", desc:"Decay-weighted averages across 5M+ tracked pulls. Not naive midpoints — real calibrated data updated every 30 seconds across all 51 active packs." },
+  { icon:"📈", name:"EV History Charts",         tag:"PRO",       desc:"Watch the EV ratio move like a stock ticker. See exactly when packs cross above or below break-even — and time your pull perfectly." },
+  { icon:"🎯", name:"Buyback EV ★ Exclusive",    tag:"PRO",       desc:"Real cash in your hand after Courtyard's 10% cut + 6% processing fee. Nobody else shows you this number. The only EV that actually matters." },
+  { icon:"📋", name:"Pull Feed",                 tag:"REAL-TIME", desc:"Live feed of every recent pull with card images, FMV values, and grades. See what's actually coming out of each pack right now." },
+  { icon:"🔔", name:"+EV Alerts",                tag:"PRO",       desc:"Push notifications the moment any pack crosses 1.2x buyback EV. Buy when the math is in your favour — not when you feel lucky." },
+  { icon:"🏆", name:"Multi-Pack Rankings",       tag:"REAL-TIME", desc:"Compare all 51 active Courtyard packs side by side. Instantly see which pack is the best value at any given moment." },
 ];
 
-function Counter({ end, duration=2000, suffix="" }: { end:number; duration?:number; suffix?:string }) {
-  const [count, setCount] = useState(0);
+const STEPS = [
+  { n:"01", title:"We track every pull",      desc:"Our system fetches Courtyard data every 30 seconds — pull values, odds shifts, pool changes — around the clock across all 51 active packs." },
+  { n:"02", title:"We calibrate the real EV", desc:"Using decay-weighted averages across 5M+ tracked pulls, we calculate what each pack is actually worth right now. No assumptions, just data." },
+  { n:"03", title:"You buy with an edge",     desc:"Check the EV ratio before you rip. Above 1.0x? The pack is worth more than you're paying. Below 1.0x? Maybe wait an hour." },
+];
+
+const PACK_GRID = [
+  { name:"Pokémon Platinum Pack",  ev:"1.663", signal:"BUY",        cls:"buy"  },
+  { name:"Wildcard Master Pack",   ev:"3.240", signal:"STRONG BUY", cls:"buy"  },
+  { name:"Basketball Starter",     ev:"1.376", signal:"BUY",        cls:"buy"  },
+  { name:"One Piece Master Pack",  ev:"1.240", signal:"BUY",        cls:"buy"  },
+  { name:"Pokémon Starter Pack",   ev:"0.986", signal:"WAIT",       cls:"hold" },
+  { name:"Lucky Legends Pack",     ev:"0.097", signal:"SKIP",       cls:"skip" },
+];
+
+function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       obs.disconnect();
-      const start = performance.now();
+      const s = performance.now();
       const tick = (now: number) => {
-        const p = Math.min((now - start) / duration, 1);
+        const p = Math.min((now - s) / 2000, 1);
         const ease = 1 - Math.pow(1 - p, 3);
-        setCount(Math.floor(ease * end));
-        if (p < 1) requestAnimationFrame(tick); else setCount(end);
+        setVal(Math.floor(ease * end));
+        if (p < 1) requestAnimationFrame(tick);
+        else setVal(end);
       };
       requestAnimationFrame(tick);
-    }, { threshold: 0.3 });
+    }, { threshold: 0.5 });
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
-  }, [end, duration]);
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+  }, [end]);
+  return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
 }
 
 export default function LandingPage({ onEnterApp }: { onEnterApp: () => void }) {
   const { isSignedIn } = useUser();
   const [stats, setStats] = useState<any>(null);
-  const [liveEV, setLiveEV] = useState<any>(null);
 
   useEffect(() => {
     fetch("/api/founding-stats").then(r => r.json()).then(setStats).catch(() => {});
-    fetch("/api/pulls").then(r => r.json()).then(d => {
-      if (d.packs?.length) setLiveEV(d);
-    }).catch(() => {});
   }, []);
 
   const price     = stats?.currentPrice ?? 29;
   const remaining = stats?.foundingRemaining ?? 100;
   const filled    = 100 - remaining;
   const pct       = Math.round((filled / 100) * 100);
-  const totalPaid = stats?.totalPaid ?? 0;
-
-  const bestPack  = liveEV?.packs?.[0];
-  const starterEV = liveEV?.packs?.find((p:any) => p.id?.includes('starter'))?.evRatio?.toFixed(3);
-  const proEV     = liveEV?.packs?.find((p:any) => p.id?.includes('pro') && p.id?.includes('pkmn'))?.evRatio?.toFixed(3);
 
   return (
-    <div style={{background:"#030810",color:"#c8dff0",fontFamily:"'Space Mono','Courier New',monospace",overflowX:"hidden"}}>
+    <div style={{background:"#060608",minHeight:"100vh",color:"#f0f0f0"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap');
+        :root{--bg:#060608;--surface:#0d0d10;--card:#111115;--border:rgba(255,255,255,0.07);--green:#00ff88;--green-muted:rgba(0,255,136,0.08);--text:#f0f0f0;--muted:#666672;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Syne',sans-serif}
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 
-        .lp-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(3,8,16,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.05)}
-        .nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none}
-        .nav-logo-mark{width:28px;height:28px;background:#00ff87;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#000}
-        .nav-logo-text{font-size:15px;font-weight:700;color:#fff;font-family:'Syne',sans-serif;letter-spacing:-.3px}
-        .nav-live{display:flex;align-items:center;gap:6px;font-size:11px;color:#00ff87}
-        .nav-dot{width:6px;height:6px;border-radius:50%;background:#00ff87;animation:blink 2s infinite}
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-        .nav-links{display:flex;align-items:center;gap:24px}
-        .nav-link{color:#3a5068;text-decoration:none;font-size:12px;transition:color .15s}
-        .nav-link:hover{color:#c8dff0}
-        .nav-cta{padding:7px 18px;background:#00ff87;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
-        .nav-cta:hover{background:#00e87a;transform:translateY(-1px)}
+        .lp-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 48px;background:rgba(6,6,8,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+        .lp-logo{font-family:var(--display);font-size:20px;font-weight:800;color:var(--green);letter-spacing:-.5px;display:flex;align-items:center;gap:8px;text-decoration:none}
+        .logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pdot 2s ease-in-out infinite}
+        @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+        .nav-links{display:flex;align-items:center;gap:32px;list-style:none}
+        .nav-links a{font-size:13px;color:var(--muted);text-decoration:none;font-weight:500;transition:color .2s}
+        .nav-links a:hover{color:var(--text)}
+        .nav-actions{display:flex;gap:10px;align-items:center}
+        .btn-ghost{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .2s}
+        .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+        .btn-green{background:var(--green);color:#000;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);transition:all .2s}
+        .btn-green:hover{background:#33ffaa;box-shadow:0 0 20px rgba(0,255,136,.3)}
 
-        .ticker-bar{background:#040c1a;border-bottom:1px solid rgba(0,255,135,.08);overflow:hidden;padding:9px 0;position:relative}
-        .ticker-inner{display:flex;gap:64px;width:max-content;animation:scroll 50s linear infinite}
-        @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-        .ticker-item{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px}
-        .ticker-bar::before,.ticker-bar::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
-        .ticker-bar::before{left:0;background:linear-gradient(90deg,#040c1a,transparent)}
-        .ticker-bar::after{right:0;background:linear-gradient(-90deg,#040c1a,transparent)}
+        .lp-hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 24px 80px;position:relative;overflow:hidden;text-align:center}
+        .hero-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(0,255,136,.06) 0%,transparent 70%)}
+        .hero-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:40px 40px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%)}
+        .hero-badge{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.15em;text-transform:uppercase;background:var(--green-muted);border:1px solid rgba(0,255,136,.2);padding:5px 14px;border-radius:20px;margin-bottom:28px;display:inline-flex;align-items:center;gap:8px}
+        .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pdot 1.5s ease-in-out infinite;flex-shrink:0}
+        .lp-hero h1{font-family:var(--display);font-size:clamp(44px,7vw,88px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:20px;max-width:800px}
+        .lp-hero h1 span{color:var(--green)}
+        .lp-hero > p{font-size:17px;color:var(--muted);line-height:1.6;max-width:520px;margin:0 auto 36px;font-weight:300}
+        .hero-cta-row{display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:28px}
+        .btn-hero{background:var(--green);color:#000;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);transition:all .2s}
+        .btn-hero:hover{background:#33ffaa;box-shadow:0 0 30px rgba(0,255,136,.3);transform:translateY(-1px)}
+        .btn-hero-ghost{background:none;border:1px solid var(--border);color:var(--muted);padding:13px 28px;border-radius:8px;font-size:14px;cursor:pointer;font-family:var(--sans);transition:all .2s}
+        .btn-hero-ghost:hover{border-color:var(--green);color:var(--green)}
 
-        .live-stats{background:#040c1a;border-bottom:1px solid rgba(255,255,255,.05);padding:12px 40px;display:flex;align-items:center;gap:0;overflow-x:auto}
-        .stat-cell{flex:1;min-width:120px;text-align:center;padding:0 20px;border-right:1px solid rgba(255,255,255,.06)}
+        .dash-wrap{width:100%;max-width:760px;margin:24px auto 0;position:relative}
+        .dash-wrap::before{content:'';position:absolute;inset:-1px;border-radius:13px;background:linear-gradient(135deg,rgba(0,255,136,.3),transparent 50%,rgba(0,255,136,.1));pointer-events:none;z-index:1}
+        .dashboard{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;z-index:0;box-shadow:0 40px 80px rgba(0,0,0,.6)}
+        .dash-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.3)}
+        .dash-dots{display:flex;gap:6px}
+        .dash-dot{width:10px;height:10px;border-radius:50%}
+        .dash-badge{font-family:var(--mono);font-size:10px;background:var(--green-muted);color:var(--green);border:1px solid rgba(0,255,136,.2);padding:2px 8px;border-radius:4px}
+        .dash-metrics{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border)}
+        .dash-metric{padding:14px 16px;border-right:1px solid var(--border)}
+        .dash-metric:last-child{border-right:none}
+        .dm-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+        .dm-val{font-family:var(--mono);font-size:20px;font-weight:700}
+        .dash-chart{padding:16px;height:100px;background:rgba(0,0,0,.2)}
+        .dash-chart svg{width:100%;height:100%}
+
+        .lp-ticker{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;padding:12px 0;position:relative}
+        .lp-ticker::before,.lp-ticker::after{content:'';position:absolute;top:0;bottom:0;width:100px;z-index:2;pointer-events:none}
+        .lp-ticker::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+        .lp-ticker::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+        .ticker-track{display:flex;animation:tsroll 45s linear infinite;width:max-content}
+        @keyframes tsroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .ticker-item{display:flex;align-items:center;gap:10px;padding:0 28px;border-right:1px solid var(--border);white-space:nowrap}
+        .ti-pack{font-family:var(--mono);font-size:11px;color:var(--muted)}
+        .ti-ev{font-family:var(--mono);font-size:12px;font-weight:700}
+        .ti-ev.pos{color:var(--green)}.ti-ev.neg{color:#ff5757}
+        .ti-badge{font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.08em}
+        .ti-badge.buy{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+        .ti-badge.hot{background:rgba(255,100,50,.1);color:#ff6432;border:1px solid rgba(255,100,50,.2)}
+        .ti-badge.wait{background:rgba(100,100,120,.15);color:var(--muted);border:1px solid var(--border)}
+
+        .stats-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+        .stat-cell{padding:28px 32px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
         .stat-cell:last-child{border-right:none}
-        .stat-label{font-size:9px;color:#3a5068;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
-        .stat-val{font-size:18px;font-weight:700;font-family:'Syne',sans-serif;color:#00ff87}
-        .stat-sub{font-size:9px;color:#3a5068;margin-top:2px}
+        .sc-num{font-family:var(--display);font-size:36px;font-weight:800;letter-spacing:-.03em;color:var(--green)}
+        .sc-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
 
-        .hero{text-align:center;padding:90px 32px 60px;max-width:820px;margin:0 auto}
-        .hero-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,135,.06);border:1px solid rgba(0,255,135,.18);border-radius:20px;padding:6px 14px;font-size:11px;color:#00ff87;margin-bottom:28px}
-        .hero-h1{font-family:'Syne',sans-serif;font-size:clamp(52px,8vw,88px);font-weight:800;color:#fff;line-height:1;letter-spacing:-3px;margin-bottom:20px}
-        .hero-h1 span{color:#00ff87}
-        .hero-sub{font-size:clamp(14px,2vw,17px);color:#3a5068;line-height:1.7;max-width:520px;margin:0 auto 36px;font-family:'Space Mono',monospace}
-        .hero-cta-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-        .btn-primary{padding:14px 32px;background:#00ff87;color:#000;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s}
-        .btn-primary:hover{background:#00e87a;transform:translateY(-2px)}
-        .btn-secondary{padding:14px 24px;background:transparent;color:#c8dff0;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s}
-        .btn-secondary:hover{border-color:rgba(255,255,255,.25);color:#fff}
-        .hero-progress-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;color:#3a5068}
-        .progress-bar{width:120px;height:3px;background:#122038;border-radius:2px;overflow:hidden}
-        .progress-fill{height:100%;background:#00ff87;border-radius:2px}
+        .lp-section{padding:100px 48px;max-width:1200px;margin:0 auto}
+        .sec-label{font-family:var(--mono);font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:.18em;margin-bottom:14px;display:block}
+        .sec-title{font-family:var(--display);font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-bottom:16px}
+        .sec-sub{font-size:15px;color:var(--muted);max-width:480px;line-height:1.6;font-weight:300}
 
-        .section{padding:88px 40px;max-width:1100px;margin:0 auto}
-        .section-tag{font-size:10px;letter-spacing:3px;color:#00ff87;text-transform:uppercase;margin-bottom:10px;font-weight:700}
-        .section-h2{font-family:'Syne',sans-serif;font-size:clamp(30px,4vw,46px);font-weight:800;color:#fff;line-height:1.05;letter-spacing:-1.5px;margin-bottom:16px}
-        .section-sub{font-size:14px;color:#3a5068;line-height:1.7;max-width:520px;margin-bottom:48px}
+        .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:52px}
+        .feat-card{background:var(--surface);padding:32px 28px;transition:background .2s}
+        .feat-card:hover{background:var(--card)}
+        .feat-icon-box{width:40px;height:40px;border-radius:8px;background:var(--green-muted);border:1px solid rgba(0,255,136,.15);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:18px}
+        .feat-name{font-family:var(--display);font-size:15px;font-weight:700;margin-bottom:8px}
+        .feat-desc{font-size:13px;color:var(--muted);line-height:1.6;font-weight:300}
 
-        .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.05);border-radius:14px;overflow:hidden}
-        @media(max-width:768px){.feat-grid{grid-template-columns:1fr}}
-        .feat-card{background:#06101e;padding:28px 26px;transition:background .2s}
-        .feat-card:hover{background:#0a1625}
-        .feat-icon{font-size:20px;margin-bottom:14px}
-        .feat-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:8px}
-        .feat-desc{font-size:11px;color:#3a5068;line-height:1.75}
+        .how-steps{display:flex;gap:0;position:relative;margin-top:48px}
+        .how-steps::before{content:'';position:absolute;top:24px;left:24px;right:24px;height:1px;background:linear-gradient(90deg,var(--green),#00cc6a,var(--green));opacity:.3}
+        .how-step{flex:1;padding:0 24px;position:relative}
+        .step-circle{width:48px;height:48px;border-radius:50%;background:var(--surface);border:1px solid rgba(0,255,136,.3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);margin-bottom:20px;position:relative;z-index:1}
+        .step-title{font-family:var(--display);font-size:17px;font-weight:700;margin-bottom:8px}
+        .step-desc{font-size:13px;color:var(--muted);line-height:1.6;font-weight:300}
 
-        .pulls-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
-        @media(max-width:900px){.pulls-grid{grid-template-columns:repeat(3,1fr)}}
-        @media(max-width:600px){.pulls-grid{grid-template-columns:repeat(2,1fr)}}
-        .pull-card{background:#07101f;border:1px solid #122038;border-radius:10px;overflow:hidden;transition:transform .2s,border-color .2s}
-        .pull-card:hover{transform:translateY(-3px);border-color:#1e3a50}
-        .pull-img{width:100%;aspect-ratio:3/4;object-fit:cover;background:#040c1a;display:block}
-        .pull-info{padding:10px}
-        .pull-name{font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .pull-price{font-size:14px;font-weight:800;color:#00ff87;font-family:'Syne',sans-serif}
-        .pull-pack{font-size:9px;color:#3a5068;margin-top:2px}
+        .pack-hero-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.5)}
+        .phc-top{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.3)}
+        .phc-name{font-family:var(--display);font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px}
+        .phc-tag{font-family:var(--mono);font-size:9px;text-transform:uppercase;background:var(--green-muted);color:var(--green);border:1px solid rgba(0,255,136,.2);padding:3px 8px;border-radius:4px;letter-spacing:.1em}
+        .phc-metrics{display:flex;gap:32px;padding:16px 20px;border-bottom:1px solid var(--border)}
+        .phcm-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green)}
+        .phcm-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+        .pack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-top:1px solid var(--border)}
+        .pg-cell{background:var(--surface);padding:16px 18px;transition:background .2s;cursor:pointer}
+        .pg-cell:hover{background:rgba(0,255,136,.04)}
+        .pgc-name{font-size:12px;color:var(--muted);margin-bottom:6px}
+        .pgc-ev{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+        .pgc-badge{display:inline-block;font-family:var(--mono);font-size:9px;text-transform:uppercase;padding:2px 7px;border-radius:3px;letter-spacing:.1em}
+        .pgc-badge.buy{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.2)}
+        .pgc-badge.hold{background:rgba(255,204,68,.1);color:#ffcc44;border:1px solid rgba(255,204,68,.2)}
+        .pgc-badge.skip{background:rgba(255,80,80,.08);color:#ff5050;border:1px solid rgba(255,80,80,.15)}
 
-        .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
-        @media(max-width:768px){.steps-grid{grid-template-columns:1fr;gap:28px}}
-        .step-num{font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:rgba(0,255,135,.06);line-height:1;margin-bottom:12px}
-        .step-line{width:36px;height:2px;background:rgba(0,255,135,.35);margin-bottom:18px}
-        .step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:#fff;margin-bottom:8px}
-        .step-desc{font-size:12px;color:#3a5068;line-height:1.75}
+        .pulls-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:40px}
+        .pull-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:transform .2s,border-color .2s}
+        .pull-card:hover{transform:translateY(-3px);border-color:rgba(0,255,136,.2)}
+        .pull-img-box{height:120px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:40px;border-bottom:1px solid var(--border)}
+        .pull-info{padding:10px 12px}
+        .pull-name{font-size:11px;color:var(--muted);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .pull-price{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green)}
+        .pull-pack{font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
 
-        .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:860px;margin:0 auto}
-        @media(max-width:768px){.pricing-grid{grid-template-columns:1fr}}
-        .price-card{background:#06101e;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:24px;position:relative;opacity:.55}
-        .price-card.current{border-color:rgba(0,255,135,.3);background:rgba(0,255,135,.03);opacity:1}
-        .price-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:#00ff87;color:#000;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;white-space:nowrap;font-family:inherit}
-        .price-tier{font-size:10px;color:#3a5068;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
-        .price-amount{display:flex;align-items:baseline;gap:3px;margin-bottom:4px}
-        .price-num{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:#00ff87;line-height:1}
-        .price-mo{font-size:13px;color:#3a5068}
-        .price-spots{font-size:10px;color:#3a5068;margin-bottom:12px}
-        .price-desc{font-size:11px;color:#3a5068;line-height:1.6;margin-bottom:16px}
-        .price-bar-row{display:flex;justify-content:space-between;font-size:9px;margin-bottom:5px}
-        .price-bar{height:4px;background:#122038;border-radius:2px;overflow:hidden;margin-bottom:14px}
-        .price-bar-fill{height:100%;background:#00ff87;border-radius:2px;transition:width .5s}
-        .price-members{text-align:center;font-size:9px;color:#3a5068;margin-top:8px}
-        .price-cta{width:100%;padding:12px;background:#00ff87;color:#000;border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;margin-bottom:6px}
-        .price-cta:hover{background:#00e87a}
-        .price-locked{width:100%;padding:10px;background:transparent;color:#3a5068;border:1px solid rgba(255,255,255,.06);border-radius:8px;font-size:11px;font-family:inherit;cursor:default}
-        .price-trust{text-align:center;font-size:9px;color:#3a5068;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+        .pricing-card{background:var(--surface);border:1px solid rgba(0,255,136,.25);border-radius:16px;max-width:420px;margin:48px auto 0;overflow:hidden;box-shadow:0 0 60px rgba(0,255,136,.06)}
+        .pc-top{padding:32px 32px 24px;border-bottom:1px solid var(--border)}
+        .pc-name{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--green);margin-bottom:16px}
+        .pc-price-row{display:flex;align-items:flex-start;gap:4px;justify-content:center;margin-bottom:6px}
+        .pc-dollar{font-family:var(--display);font-size:24px;font-weight:700;color:var(--muted);margin-top:8px}
+        .pc-amount{font-family:var(--display);font-size:64px;font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--text)}
+        .pc-period{font-size:13px;color:var(--muted);align-self:flex-end;margin-bottom:8px}
+        .pc-sub{font-size:12px;color:var(--muted);text-align:center}
+        .pc-bar-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--muted);margin:14px 0 5px;padding:0 32px}
+        .pc-bar-wrap{padding:0 32px;margin-bottom:4px}
+        .pc-bar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+        .pc-bar-fill{height:100%;background:var(--green);border-radius:2px}
+        .pc-feats{padding:24px 32px;display:flex;flex-direction:column;gap:12px}
+        .pcf-item{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+        .pcf-check{width:18px;height:18px;border-radius:50%;background:var(--green-muted);border:1px solid rgba(0,255,136,.25);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green);flex-shrink:0}
+        .pc-cta{padding:0 32px 32px}
+        .btn-full{width:100%;padding:14px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--sans);transition:all .2s}
+        .btn-full:hover{background:#33ffaa;box-shadow:0 0 30px rgba(0,255,136,.3)}
+        .pc-guarantee{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin-top:10px;letter-spacing:.05em}
 
-        .cta-section{background:rgba(0,255,135,.03);border-top:1px solid rgba(0,255,135,.1);padding:80px 40px;text-align:center}
-        .cta-h2{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,50px);font-weight:800;color:#fff;line-height:1.05;letter-spacing:-1.5px;margin-bottom:14px}
-        .cta-sub{font-size:14px;color:#3a5068;margin-bottom:32px;line-height:1.7}
+        .final-cta{margin:60px 48px;background:var(--surface);border:1px solid rgba(0,255,136,.15);border-radius:16px;padding:64px 48px;text-align:center;max-width:1104px;margin-left:auto;margin-right:auto;position:relative;overflow:hidden}
+        .final-cta::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent)}
+        .final-cta h2{font-family:var(--display);font-size:clamp(32px,5vw,56px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:16px}
+        .final-cta h2 span{color:var(--green)}
+        .final-cta > p{font-size:16px;color:var(--muted);margin-bottom:36px;font-weight:300}
 
-        .lp-footer{border-top:1px solid rgba(255,255,255,.05);padding:28px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:10px;color:#3a5068}
-
-        .divider{border:none;border-top:1px solid rgba(255,255,255,.05);margin:0}
-
-        @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
-        .fu1{animation:fadeUp .7s ease forwards}
-        .fu2{animation:fadeUp .7s .12s ease forwards;opacity:0}
-        .fu3{animation:fadeUp .7s .24s ease forwards;opacity:0}
-        .fu4{animation:fadeUp .7s .36s ease forwards;opacity:0}
+        footer{border-top:1px solid var(--border);padding:32px 48px;display:flex;justify-content:space-between;align-items:center}
+        .footer-logo{font-family:var(--display);font-size:18px;font-weight:800;color:var(--green)}
+        .footer-links{display:flex;gap:24px;list-style:none}
+        .footer-links a{font-size:13px;color:var(--muted);text-decoration:none;transition:color .2s}
+        .footer-links a:hover{color:var(--text)}
+        .footer-copy{font-family:var(--mono);font-size:11px;color:var(--muted)}
       `}</style>
 
       {/* NAV */}
       <nav className="lp-nav">
-        <a className="nav-logo" href="/">
-          <div className="nav-logo-mark">P</div>
-          <span className="nav-logo-text">PackPulse</span>
-        </a>
-        <div className="nav-live">
-          <span className="nav-dot"/>
-          Tracking live
-        </div>
-        <div className="nav-links">
-          <a className="nav-link" href="#features">Features</a>
-          <a className="nav-link" href="#how">How it works</a>
-          <a className="nav-link" href="#pricing">Pricing</a>
-          {isSignedIn
-            ? <button className="nav-cta" onClick={onEnterApp}>Open App →</button>
-            : <button className="nav-cta" onClick={onEnterApp}>Join Now →</button>
-          }
+        <a className="lp-logo" href="/"><span className="logo-dot"/>PackPulse</a>
+        <ul className="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+        </ul>
+        <div className="nav-actions">
+          {isSignedIn ? (
+            <button className="btn-green" onClick={onEnterApp}>Open App →</button>
+          ) : (
+            <>
+              <SignInButton mode="modal"><button className="btn-ghost">Sign in</button></SignInButton>
+              <button className="btn-green" onClick={onEnterApp}>Join Now →</button>
+            </>
+          )}
         </div>
       </nav>
 
-      {/* LIVE TICKER */}
-      <div style={{paddingTop:60}}>
-        <div className="ticker-bar">
-          <div className="ticker-inner">
-            {[...TICKER_ITEMS,...TICKER_ITEMS].map((t,i)=>(
-              <div key={i} className="ticker-item">
-                <span style={{color:"#3a5068"}}>{t.user}</span>
-                <span style={{color:"#c8dff0",fontWeight:700}}>{t.card}</span>
-                <span style={{color:t.win?"#00ff87":"#ff3860",fontWeight:700}}>${t.fmv.toLocaleString()}</span>
-                {t.win
-                  ? <span style={{color:"rgba(0,255,135,.4)",fontSize:9}}>(+${(t.fmv - parseInt(t.pack)).toFixed(0)})</span>
-                  : <span style={{color:"rgba(255,56,96,.4)",fontSize:9}}>(-${Math.abs(parseInt(t.pack) - t.fmv)})</span>
-                }
-                <span style={{color:"rgba(255,255,255,.07)"}}>·</span>
+      {/* HERO */}
+      <div className="lp-hero">
+        <div className="hero-bg"/><div className="hero-grid"/>
+        <div className="hero-badge"><span className="live-dot"/><span style={{fontFamily:"var(--mono)",fontSize:10}}>5,137,564 pulls tracked and counting</span></div>
+        <h1>Stop buying packs<br/><span>blind.</span></h1>
+        <p>Real-time expected value tracking for every Courtyard.io mystery pack. See the real math before you rip.</p>
+        <div className="hero-cta-row">
+          <button className="btn-hero" onClick={onEnterApp}>Join Now — ${price}/mo →</button>
+          <button className="btn-hero-ghost" onClick={onEnterApp}>See Live Data</button>
+        </div>
+        <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--muted)",marginBottom:40,display:"flex",alignItems:"center",gap:12,justifyContent:"center"}}>
+          <span>{filled}/100 filled</span>
+          <div style={{width:160,height:3,background:"rgba(255,255,255,.08)",borderRadius:2,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${Math.max(pct,2)}%`,background:"var(--green)",borderRadius:2}}/>
+          </div>
+          <span style={{color:"#ffcc44"}}>{remaining} left</span>
+        </div>
+        <div className="dash-wrap">
+          <div className="dashboard">
+            <div className="dash-topbar">
+              <div className="dash-dots"><div className="dash-dot" style={{background:"#ff5f57"}}/><div className="dash-dot" style={{background:"#ffbd2e"}}/><div className="dash-dot" style={{background:"#28c840"}}/></div>
+              <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--muted)"}}>packpulse.io/dashboard</span>
+              <span className="dash-badge">● LIVE</span>
+            </div>
+            <div className="dash-metrics">
+              {[{l:"EV RATIO",v:"1.247",c:"#00ff88"},{l:"CALIBRATED EV",v:"$31.18",c:"#00ff88"},{l:"PACK PRICE",v:"$25.00",c:"#f0f0f0"},{l:"SIGNAL",v:"GREAT VALUE",c:"#00ff88"}].map(m=>(
+                <div key={m.l} className="dash-metric"><div className="dm-label">{m.l}</div><div className="dm-val" style={{color:m.c}}>{m.v}</div></div>
+              ))}
+            </div>
+            <div className="dash-chart">
+              <svg viewBox="0 0 700 80" preserveAspectRatio="none">
+                <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00ff88" stopOpacity="0.15"/><stop offset="100%" stopColor="#00ff88" stopOpacity="0"/></linearGradient></defs>
+                <path d="M0,65 L50,60 L100,55 L150,52 L200,48 L250,50 L300,44 L350,40 L400,38 L450,42 L500,35 L550,30 L600,28 L650,24 L700,20" fill="none" stroke="#00ff88" strokeWidth="2" opacity="0.8"/>
+                <path d="M0,65 L50,60 L100,55 L150,52 L200,48 L250,50 L300,44 L350,40 L400,38 L450,42 L500,35 L550,30 L600,28 L650,24 L700,20 L700,80 L0,80 Z" fill="url(#cg)"/>
+                <line x1="0" y1="52" x2="700" y2="52" stroke="#ff5757" strokeWidth="1" strokeDasharray="4,4" opacity="0.4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TICKER */}
+      <div className="lp-ticker">
+        <div className="ticker-track">
+          {[...TICKER_ITEMS,...TICKER_ITEMS].map((t,i)=>(
+            <div key={i} className="ticker-item">
+              <span className="ti-pack">{t.pack}</span>
+              <span className={`ti-ev ${t.pos?"pos":"neg"}`}>{t.ev}x</span>
+              <span className={`ti-badge ${t.signal.includes("STRONG")?"hot":t.pos?"buy":"wait"}`}>{t.signal}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div style={{padding:"64px 48px"}}>
+        <div className="stats-grid">
+          {[{num:<Counter end={5137564}/>,label:"Pulls Analyzed"},{num:"24/7",label:"Live Monitoring"},{num:"30s",label:"Update Interval"},{num:<Counter end={51}/>,label:"Active Packs"}].map((s,i)=>(
+            <div key={i} className="stat-cell"><div className="sc-num">{s.num}</div><div className="sc-label">{s.label}</div></div>
+          ))}
+        </div>
+      </div>
+
+      {/* FEATURES */}
+      <section id="features" className="lp-section" style={{paddingTop:20}}>
+        <span className="sec-label">Features</span>
+        <h2 className="sec-title">Everything you need<br/>to buy smarter.</h2>
+        <p className="sec-sub">Six tools that turn a subscription into a profitable edge on every pull.</p>
+        <div className="feat-grid">
+          {FEATURES.map((f,i)=>(
+            <div key={i} className="feat-card">
+              <div className="feat-icon-box">{f.icon}</div>
+              <div className="feat-name">{f.name}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--green)",letterSpacing:".12em",marginBottom:10}}>{f.tag}</div>
+              <div className="feat-desc">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how" className="lp-section" style={{borderTop:"1px solid var(--border)"}}>
+        <span className="sec-label">How it works</span>
+        <h2 className="sec-title">Card counting,<br/>but for mystery packs.</h2>
+        <p className="sec-sub">The same edge casinos use — applied to Courtyard.io pull rates.</p>
+        <div className="how-steps">
+          {STEPS.map((s,i)=>(
+            <div key={i} className="how-step">
+              <div className="step-circle">{s.n}</div>
+              <div className="step-title">{s.title}</div>
+              <div className="step-desc">{s.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PACK MONITOR */}
+      <div style={{padding:"0 48px 80px",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:32,gap:24}}>
+          <div><span className="sec-label">Pack Monitor</span><h2 className="sec-title" style={{marginBottom:0}}>Find the best value<br/>pack instantly.</h2></div>
+          <p className="sec-sub" style={{maxWidth:280,textAlign:"right" as const}}>Every pack ranked by real EV — right now.</p>
+        </div>
+        <div className="pack-hero-card">
+          <div className="phc-top">
+            <div className="phc-name">Wildcard Master Pack<span className="phc-tag">TOP PICK</span></div>
+            <button className="btn-green" style={{fontSize:12,padding:"7px 16px"}} onClick={onEnterApp}>View Details ↗</button>
+          </div>
+          <div className="phc-metrics">
+            {[{v:"3.240",l:"EV Ratio"},{v:"$162.00",l:"Avg Pack EV"},{v:"$50.00",l:"Pack Price"},{v:"+$112.00",l:"Avg Profit"}].map((m,i)=>(
+              <div key={i}><div className="phcm-val" style={{color:i===3?"#ffcc44":"var(--green)"}}>{m.v}</div><div className="phcm-label">{m.l}</div></div>
+            ))}
+          </div>
+          <div className="pack-grid">
+            {PACK_GRID.map((p,i)=>(
+              <div key={i} className="pg-cell">
+                <div className="pgc-name">{p.name}</div>
+                <div className="pgc-ev">{p.ev}</div>
+                <span className={`pgc-badge ${p.cls}`}>{p.signal}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* LIVE STATS BAR */}
-      <div className="live-stats">
-        {[
-          { label:"STARTER PACK EV", val: starterEV ?? "1.002", sub:"", green:true },
-          { label:"PRO PACK EV",     val: proEV ?? "0.996",    sub:"", green: parseFloat(proEV??'0') >= 1 },
-          { label:"BEST VALUE NOW",  val: bestPack?.name?.split(' ').slice(-2).join(' ')??'PLATINUM', sub:"", green:true },
-          { label:"PULLS TRACKED",   val: "5,137,564",          sub:"and counting", green:false },
-          { label:"UPDATED",         val: "30s ago",            sub:"live data",    green:false },
-        ].map((s,i)=>(
-          <div key={i} className="stat-cell">
-            <div className="stat-label">{s.label}</div>
-            <div className="stat-val" style={{color:s.green?"#00ff87":"#fff"}}>{s.val}</div>
-            {s.sub&&<div className="stat-sub">{s.sub}</div>}
-          </div>
-        ))}
-      </div>
-
-      {/* HERO */}
-      <div className="hero">
-        <div className="hero-pill fu1">
-          <span className="nav-dot" style={{width:5,height:5}}/>
-          <Counter end={5137564} suffix=" pulls tracked and counting"/>
-        </div>
-
-        <h1 className="hero-h1 fu2">
-          Stop buying packs <span>blind.</span>
-        </h1>
-
-        <p className="hero-sub fu3">
-          Real-time expected value tracking for every Courtyard.io mystery pack.
-          See the real math before you rip.
-        </p>
-
-        <div className="hero-cta-row fu4">
-          <button className="btn-primary" onClick={onEnterApp}>
-            Join Now — ${price}/mo →
-          </button>
-          <button className="btn-secondary" onClick={onEnterApp}>
-            See Live Data
-          </button>
-        </div>
-
-        <div className="hero-progress-row fu4">
-          <span>{filled}/100 filled</span>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{width:`${pct}%`}}/>
-          </div>
-          <span style={{color:remaining<=20?"#ff3860":"#ffd166"}}>{remaining} left</span>
-        </div>
-      </div>
-
-      <hr className="divider"/>
-
-      {/* REAL PULLS SECTION */}
-      <div className="section">
-        <div className="section-tag">Real Pulls</div>
-        <h2 className="section-h2">See what members are pulling.</h2>
+      {/* REAL PULLS */}
+      <div style={{padding:"0 48px 80px",maxWidth:1200,margin:"0 auto"}}>
+        <span className="sec-label">Real Pulls</span>
+        <h2 className="sec-title">See what members<br/>are pulling.</h2>
         <div className="pulls-grid">
-          {REAL_PULLS.map((p,i)=>(
+          {[{e:"🃏",n:"Houndoom Aquapolis Holo",p:"$1,089",pk:"from a $99 pack"},{e:"⚡",n:"Dialga G Crosshatch Holo",p:"$160",pk:"from a $100 pack"},{e:"🌀",n:"Pheromosa & Buzzwole GX",p:"$113",pk:"from a $50 pack"},{e:"✨",n:"Mew Galarian Gallery",p:"$110",pk:"from a $50 pack"},{e:"🔥",n:"Zacian V Full Art",p:"$86",pk:"from a $50 pack"}].map((item,i)=>(
             <div key={i} className="pull-card">
-              <img className="pull-img" src={p.img} alt={p.card}
-                onError={(e)=>{(e.target as HTMLImageElement).src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='133' viewBox='0 0 100 133'%3E%3Crect width='100' height='133' fill='%23070f1c'/%3E%3C/svg%3E";}}
-              />
+              <div className="pull-img-box">{item.e}</div>
               <div className="pull-info">
-                <div className="pull-name">{p.card}</div>
-                <div className="pull-price">${p.price.toLocaleString()}</div>
-                <div className="pull-pack">from a {p.pack}</div>
+                <div className="pull-name">{item.n}</div>
+                <div className="pull-price">{item.p}</div>
+                <div className="pull-pack">{item.pk}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      <hr className="divider"/>
-
-      {/* FEATURES */}
-      <div id="features" className="section">
-        <div className="section-tag">Features</div>
-        <h2 className="section-h2">Everything you need<br/>to buy smarter.</h2>
-        <div className="feat-grid">
-          {FEATURES.map((f,i)=>(
-            <div key={i} className="feat-card">
-              <div className="feat-icon" style={{color:f.accent}}>{f.icon}</div>
-              <div className="feat-title">{f.title}</div>
-              <div className="feat-desc">{f.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <hr className="divider"/>
-
-      {/* HOW IT WORKS */}
-      <div id="how" className="section">
-        <div className="section-tag">How it works</div>
-        <h2 className="section-h2">Card counting,<br/>but for mystery packs.</h2>
-        <div className="steps-grid">
-          {[
-            { n:"01", title:"We track every pull", desc:"Our system fetches Courtyard data every 30 seconds — pull values, odds shifts, pool changes — around the clock across all 51 active packs." },
-            { n:"02", title:"We calibrate the real EV", desc:"Using decay-weighted averages across 5M+ tracked pulls, we calculate what each pack is actually worth right now. No assumptions, just data." },
-            { n:"03", title:"You buy with an edge", desc:"Check the EV ratio before you rip. Above 1.0x? The pack is worth more than you're paying. Below 1.0x? Maybe wait." },
-          ].map((s,i)=>(
-            <div key={i}>
-              <div className="step-num">{s.n}</div>
-              <div className="step-line"/>
-              <div className="step-title">{s.title}</div>
-              <div className="step-desc">{s.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <hr className="divider"/>
 
       {/* PRICING */}
-      <div id="pricing" className="section">
-        <div style={{textAlign:"center",marginBottom:48}}>
-          <div className="section-tag" style={{justifyContent:"center",display:"flex"}}>Pricing</div>
-          <h2 className="section-h2" style={{marginBottom:8}}>Lock in your rate<br/>before it goes up.</h2>
-          <p style={{color:"#3a5068",fontSize:13}}>Price increases as more members join. Earlier is always cheaper.</p>
-        </div>
-
-        <div className="pricing-grid">
-          {/* SOLD OUT tier — to be added after first 100 fill */}
-          <div className="price-card">
-            <div className="price-tier">Founding</div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div className="price-amount">
-                <span style={{fontSize:20,fontWeight:700,color:"#3a5068",fontFamily:"Syne,sans-serif",textDecoration:"line-through"}}>&nbsp;</span>
-              </div>
-            </div>
-            <div className="price-spots" style={{color:"#3a5068"}}>Members 1–? </div>
-            <div className="price-desc">First tier — only available once. Members who joined at the very beginning, locked in for life.</div>
-            <div className="price-locked" style={{textAlign:"center"}}>Sold Out</div>
+      <div id="pricing" style={{padding:"80px 48px",maxWidth:1200,margin:"0 auto",textAlign:"center" as const}}>
+        <span className="sec-label">Pricing</span>
+        <h2 className="sec-title">Lock in your rate<br/>before it goes up.</h2>
+        <p className="sec-sub" style={{margin:"0 auto"}}>One plan. Everything included. Priced to pay for itself on your first smart buy.</p>
+        <div className="pricing-card">
+          <div className="pc-top">
+            <div className="pc-name">Early Access</div>
+            <div className="pc-price-row"><span className="pc-dollar">$</span><span className="pc-amount">{price}</span><span className="pc-period">/ mo</span></div>
+            <div className="pc-sub">Billed monthly · Cancel anytime</div>
           </div>
-
-          {/* CURRENT TIER */}
-          <div className="price-card current">
-            <div className="price-badge">CURRENT TIER</div>
-            <div className="price-tier">Early Access</div>
-            <div className="price-amount">
-              <span className="price-num">${price}</span>
-              <span className="price-mo">/mo</span>
-            </div>
-            <div className="price-spots">Members 1–100</div>
-            <div style={{marginBottom:12}}>
-              <div className="price-bar-row">
-                <span style={{color:"#3a5068"}}>{filled}/100 filled</span>
-                <span style={{color:remaining<=20?"#ff3860":"#ffd166",fontWeight:700}}>{remaining} left</span>
-              </div>
-              <div className="price-bar">
-                <div className="price-bar-fill" style={{width:`${pct}%`}}/>
-              </div>
-            </div>
-            <button className="price-cta" onClick={onEnterApp}>Join Now →</button>
-            <div className="price-members">{totalPaid > 0 ? `${totalPaid} active members` : "Be the first member"}</div>
-            <div className="price-trust" style={{marginTop:10}}>
-              <span>✓ Cancel anytime</span>
-              <span>✓ Instant access</span>
-              <span>✓ 7-day refund</span>
-            </div>
+          <div className="pc-bar-row"><span>{filled}/100 early access spots filled</span><span style={{color:"#ffcc44"}}>{remaining} left</span></div>
+          <div className="pc-bar-wrap"><div className="pc-bar"><div className="pc-bar-fill" style={{width:`${Math.max(pct,2)}%`}}/></div></div>
+          <div className="pc-feats">
+            {["Live EV tracking across 51 active Courtyard packs","Buyback EV — real cash after all fees (exclusive)","BUY / WAIT / SKIP decision engine on every pack","TradingView-style EV history charts","Push alerts when packs cross 1.2x buyback EV","Budget Advisor — best pack for your budget","Full pull feed — 50 live pulls with card images","Fee breakdown — every hidden cost exposed"].map((f,i)=>(
+              <div key={i} className="pcf-item"><div className="pcf-check">✓</div><span>{f}</span></div>
+            ))}
           </div>
-
-          {/* LOCKED */}
-          <div className="price-card">
-            <div className="price-tier">Standard</div>
-            <div className="price-amount">
-              <span style={{fontSize:20,fontWeight:700,color:"#3a5068",fontFamily:"Syne,sans-serif"}}>$99</span>
-              <span className="price-mo">/mo</span>
-            </div>
-            <div className="price-spots">Members 200+</div>
-            <div className="price-desc">Full price tier. Available after Growth tier fills. Includes all Pro features.</div>
-            <div className="price-locked" style={{textAlign:"center"}}>Locked</div>
+          <div className="pc-cta">
+            {isSignedIn ? (
+              <button className="btn-full" onClick={onEnterApp}>Join Now — Start Winning →</button>
+            ) : (
+              <SignInButton mode="modal" forceRedirectUrl="/?upgrade=1">
+                <button className="btn-full">Join Now — ${price}/mo →</button>
+              </SignInButton>
+            )}
+            <div className="pc-guarantee">{remaining} early access spots left at this rate</div>
           </div>
         </div>
       </div>
 
-      <hr className="divider"/>
-
       {/* FINAL CTA */}
-      <div className="cta-section">
-        <div style={{maxWidth:560,margin:"0 auto"}}>
-          <h2 className="cta-h2">Don't buy blind.<br/>Check the math.</h2>
-          <p className="cta-sub">Real-time EV data for all 51 Courtyard packs. No guesswork.</p>
-          <button className="btn-primary" onClick={onEnterApp} style={{padding:"15px 40px",fontSize:15,borderRadius:9}}>
-            Join Now — ${price}/mo →
-          </button>
-        </div>
+      <div className="final-cta">
+        <h2>Don't open blind.<br/><span>Check the math.</span></h2>
+        <p>Every pack you've bought without data was a gamble. Make it a calculated decision.</p>
+        <button className="btn-hero" onClick={onEnterApp}>Get Started →</button>
       </div>
 
       {/* FOOTER */}
-      <footer className="lp-footer">
-        <div style={{display:"flex",alignItems:"center",gap:7}}>
-          <div style={{width:20,height:20,background:"#00ff87",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#000",fontWeight:800}}>P</div>
-          <span style={{color:"#c8dff0",fontWeight:700,fontFamily:"Syne,sans-serif",fontSize:12}}>PackPulse</span>
-          <span style={{color:"#3a5068"}}>· © 2026</span>
-        </div>
-        <div>For educational purposes only · Not financial advice · Not affiliated with Courtyard.io</div>
+      <footer>
+        <div className="footer-logo">PackPulse</div>
+        <ul className="footer-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Terms</a></li>
+        </ul>
+        <div className="footer-copy">© 2026 PackPulse · Not affiliated with Courtyard.io</div>
       </footer>
     </div>
   );
