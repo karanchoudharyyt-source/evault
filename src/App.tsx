@@ -1075,7 +1075,7 @@ function Dashboard(){
               <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",borderBottom:"1px solid #122038",background:"#07101f",flexShrink:0,overflowX:"auto" as const}}>
                 {cats.map(c=>{
                   const packs=data?(c==="all"?data.packs:data.packs.filter(p=>p.category===c)):[];
-                  return <button key={c} className={`cat-tab${tab===c?" on":""}`} onClick={()=>setTab(c)}>{c==="all"?"All":c} {packs.length}</button>;
+                  return <button key={c} className={`cat-tab${tab===c?" on":""}`} onClick={()=>setTab(c)}>{c==="all"?`All ${data?.packs.length??0}`:catLabel(c)} {c!=="all"&&<span style={{opacity:.5}}>{packs.length}</span>}</button>;
                 })}
                 <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
                   <span className="ld" style={{width:5,height:5}}/><span style={{fontSize:8,color:"#00ff87",fontWeight:700,...M}}>LIVE</span>
