@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ClerkProvider, useUser, useClerk, SignInButton, UserButton } from "@clerk/clerk-react";
 import { useCourtyardData } from "./hooks/use-courtyard-data";
 import { Pack, PullRecord } from "./data/packs";
+
+const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 const queryClient = new QueryClient();
 
@@ -42,6 +45,141 @@ function urlBase64ToUint8Array(b64:string){
   const b=b64.replace(/-/g,"+").replace(/_/g,"/");
   const raw=atob(b.padEnd(b.length+(4-b.length%4)%4,"="));
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+
+// ─── Pro features list ──────────────────────────────────────────────────────
+const PRO_FEATURES = [
+  {icon:"🔔", title:"Push Alerts",       desc:"Instant alerts when packs go +EV — even when browser is closed"},
+  {icon:"📈", title:"EV History Charts", desc:"Real TradingView-style charts — see exactly when EV shifted"},
+  {icon:"💰", title:"Budget Advisor",    desc:"Best pack for any budget, ranked by real cash after fees"},
+  {icon:"💡", title:"Fee Breakdown",     desc:"See the true cost with markup + every hidden fee exposed"},
+  {icon:"🎯", title:"Buyback EV",        desc:"Real cash you'd actually get — not just FMV"},
+  {icon:"⚡", title:"30s Updates",       desc:"Data refreshes every 30s vs 60s on free tier"},
+];
+
+// ─── Upgrade Modal ────────────────────────────────────────────────────────────
+function UpgradeModal({onClose}:{onClose:()=>void}){
+  const {user} = useUser();
+  const [stats,setStats] = useState<any>(null);
+  const [loading,setLoading] = useState(false);
+  const M={fontFamily:"monospace"} as React.CSSProperties;
+
+  useEffect(()=>{
+    fetch("/api/founding-stats").then(r=>r.json()).then(setStats).catch(()=>{});
+  },[]);
+
+  const handleUpgrade = async () => {
+    if(!user) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          clerkUserId: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
+        }),
+      });
+      const {url} = await res.json();
+      if(url) window.location.href = url;
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const price = stats?.currentPrice ?? 19;
+  const remaining = stats?.foundingRemaining ?? 50;
+  const tier = stats?.currentTier ?? 'founding';
+  const tierLabel = tier==='founding'?'Founding Member':'Standard';
+  const filled = stats ? (25 - Math.min(remaining, 25)) : 0;
+
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#07101f",border:"1px solid #122038",borderRadius:16,width:"100%",maxWidth:480,overflow:"hidden"}}>
+        {/* Header */}
+        <div style={{padding:"20px 24px 16px",borderBottom:"1px solid #122038",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:8,color:"#00ff87",letterSpacing:2,...M,marginBottom:4}}>PACKPULSE PRO</div>
+            <div style={{fontWeight:800,fontSize:22,color:"#fff",lineHeight:1.1}}>Stop buying packs blind.</div>
+            <div style={{fontSize:12,color:"#3a5068",marginTop:4}}>Every pro feature in one subscription.</div>
+          </div>
+          <button onClick={onClose} style={{all:"unset" as any,cursor:"pointer",color:"#3a5068",fontSize:18,lineHeight:1}}>✕</button>
+        </div>
+
+        {/* Pricing */}
+        <div style={{padding:"16px 24px",borderBottom:"1px solid #122038",background:"rgba(0,255,135,.03)"}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:8}}>
+            <span style={{fontWeight:800,fontSize:36,color:"#00ff87",...M}}>${Math.round(price)}</span>
+            <span style={{fontSize:12,color:"#3a5068"}}>/ month</span>
+            {tier==='founding'&&<span style={{fontSize:10,fontWeight:700,color:"#ffd166",background:"rgba(255,209,102,.1)",padding:"2px 8px",borderRadius:20,border:"1px solid rgba(255,209,102,.2)",...M}}>FOUNDING RATE — LOCKED FOR LIFE</span>}
+          </div>
+          {tier==='founding'&&(
+            <div style={{marginTop:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M,marginBottom:4}}>
+                <span>{filled}/25 founding spots filled</span>
+                <span style={{color:remaining<=10?"#ff3860":"#ffd166"}}>{remaining} left</span>
+              </div>
+              <div style={{height:4,background:"#122038",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${(filled/25)*100}%`,background:"#00ff87",borderRadius:2,transition:"width .3s"}}/>
+              </div>
+              <div style={{fontSize:9,color:"#3a5068",marginTop:4}}>Next tier: $29/mo → $29/mo. Lock in $19/mo forever. Price goes to $29/mo after 25 members.</div>
+            </div>
+          )}
+        </div>
+
+        {/* Features */}
+        <div style={{padding:"16px 24px",display:"flex",flexDirection:"column" as const,gap:10}}>
+          {PRO_FEATURES.map(f=>(
+            <div key={f.title} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <span style={{fontSize:16,flexShrink:0}}>{f.icon}</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:12,color:"#fff"}}>{f.title}</div>
+                <div style={{fontSize:10,color:"#3a5068",lineHeight:1.4}}>{f.desc}</div>
+              </div>
+              <span style={{marginLeft:"auto",color:"#00ff87",fontSize:12,flexShrink:0}}>✓</span>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{padding:"16px 24px 20px",borderTop:"1px solid #122038"}}>
+          {user ? (
+            <button onClick={handleUpgrade} disabled={loading}
+              style={{width:"100%",padding:"14px",background:loading?"#1a2a3a":"#00ff87",color:"#000",border:"none",borderRadius:10,fontWeight:800,fontSize:14,cursor:loading?"not-allowed":"pointer",...M}}>
+              {loading?"Redirecting to checkout...":"Get Pro Access →"}
+            </button>
+          ) : (
+            <SignInButton mode="modal" forceRedirectUrl="/?upgrade=1">
+              <button style={{width:"100%",padding:"14px",background:"#00ff87",color:"#000",border:"none",borderRadius:10,fontWeight:800,fontSize:14,cursor:"pointer",...M}}>
+                Sign In to Upgrade →
+              </button>
+            </SignInButton>
+          )}
+          <div style={{textAlign:"center" as const,fontSize:9,color:"#3a5068",marginTop:8,...M}}>
+            Cancel anytime · Instant access · 7-day money back guarantee
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pro Gate — wraps any pro-only feature ────────────────────────────────────
+function ProGate({children, onUpgrade}:{children:React.ReactNode; onUpgrade:()=>void}){
+  const {user,isLoaded} = useUser();
+  if(!isLoaded) return null;
+  const isPro = user?.publicMetadata?.plan && user.publicMetadata.plan !== 'free';
+  if(isPro) return <>{children}</>;
+  return(
+    <div onClick={onUpgrade} style={{cursor:"pointer",position:"relative",filter:"blur(2px)",pointerEvents:"none",userSelect:"none" as const}}>
+      {children}
+      <div style={{position:"absolute",inset:0,background:"rgba(6,13,24,.7)",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:8,pointerEvents:"all"}}>
+        <span style={{fontSize:10,color:"#00ff87",fontWeight:700,fontFamily:"monospace"}}>🔒 PRO</span>
+      </div>
+    </div>
+  );
 }
 
 // ─── EV History hook ─────────────────────────────────────────────────────────
@@ -393,6 +531,10 @@ function AlertPanel({
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function Dashboard(){
   const {data,isLoading,refetch}=useCourtyardData();
+  const {user, isLoaded:authLoaded} = useUser();
+  const {openSignIn} = useClerk();
+  const isPro = !!(user?.publicMetadata?.plan && user.publicMetadata.plan !== 'free');
+  const [showUpgrade,setShowUpgrade] = useState(false);
   const [tab,setTab]          =useState("all");
   const histData               =useEvHistory();
   const [view,setView]         =useState<"packs"|"feed"|"budget">("packs");
@@ -561,6 +703,28 @@ function Dashboard(){
     await saveSubscription(pushSub,Array.from(next),'all');
   },[alerts,swStatus,pushSub,data,saveSubscription]);
 
+  // Handle checkout success redirect
+  useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('checkout')==='success'){
+      addToast("🎉 Welcome to PackPulse Pro! All features unlocked.","ok");
+      window.history.replaceState({},'','/');
+    }
+  },[]);
+
+  // Handle checkout success/cancel redirect
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search);
+    if(p.get('checkout')==='success'){
+      addToast("🎉 Welcome to PackPulse Pro! All features unlocked.","ok");
+      window.history.replaceState({},'','/');
+    } else if(p.get('upgrade')==='1'){
+      setShowUpgrade(true);
+      window.history.replaceState({},'','/');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
   // Countdown
   useEffect(()=>{
     const t=setInterval(()=>sCd(c=>{if(c<=1){refetch();return 30;}return c-1;}),1000);
@@ -586,6 +750,9 @@ function Dashboard(){
   return(
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"#060d18",color:"#c8dff0"}}>
       <style>{CSS}</style>
+
+      {/* UPGRADE MODAL */}
+      {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)}/>}
 
       {/* TOASTS */}
       <div className="toast-wrap">
@@ -648,6 +815,17 @@ function Dashboard(){
           </div>
         ))}
         <button onClick={()=>refetch()} disabled={isLoading} style={{marginLeft:"auto",padding:"4px 11px",background:"transparent",border:"1px solid #122038",borderRadius:5,fontSize:8,color:"#3a5068",cursor:"pointer",...M}}>↻ Refresh</button>
+        {/* Auth */}
+        {authLoaded&&(user?(
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            {!isPro&&<button onClick={()=>setShowUpgrade(true)} style={{padding:"4px 10px",background:"rgba(0,255,135,.1)",border:"1px solid rgba(0,255,135,.3)",borderRadius:5,fontSize:9,color:"#00ff87",cursor:"pointer",fontWeight:700,...M}}>⚡ Upgrade</button>}
+            <UserButton afterSignOutUrl="/" appearance={{elements:{userButtonAvatarBox:"w-7 h-7"}}}/>
+          </div>
+        ):(
+          <SignInButton mode="modal">
+            <button style={{padding:"4px 12px",background:"#00ff87",border:"none",borderRadius:5,fontSize:9,color:"#000",cursor:"pointer",fontWeight:800,...M}}>Sign In</button>
+          </SignInButton>
+        ))}
       </nav>
 
       {/* BODY */}
@@ -667,8 +845,8 @@ function Dashboard(){
               <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>{lbl}</span>
             </button>
           ))}
-          {/* Alerts — opens side panel */}
-          <button className={`sb-btn${alertsOpen?" on":""}`} onClick={()=>setAlertsOpen(true)}
+          {/* Alerts — opens side panel or upgrade */}
+          <button className={`sb-btn${alertsOpen?" on":""}`} onClick={()=>isPro?setAlertsOpen(true):setShowUpgrade(true)}
             style={{borderLeftColor:alertsOpen?"#ffd166":"transparent",background:alertsOpen?"rgba(255,255,255,.025)":"transparent",color:alertsOpen?"#ffd166":"#3a5068"}}>
             <span style={{flexShrink:0}}>🔔</span>
             <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,flex:1}}>EV Alerts</span>
@@ -797,7 +975,7 @@ function Dashboard(){
                               <div style={{fontSize:10,color:"#3a5068"}}>${pack.price}.00 · {pack.pullCount??pack.totalPulls??0} pulls</div>
                             </div>
                             <button className={`bell${hasAlert?" on":""}`}
-                              onClick={(e)=>{e.stopPropagation();toggleAlert(pack.id);}}
+                              onClick={(e)=>{e.stopPropagation();isPro?toggleAlert(pack.id):setShowUpgrade(true);}}
                               title={hasAlert?"Alert ON":"Set alert"}>
                               {hasAlert?"🔔":"🔕"}
                             </button>
@@ -853,7 +1031,20 @@ function Dashboard(){
           )}
 
           {/* ═══ BUDGET ADVISOR ═══ */}
-          {data&&view==="budget"&&(
+          {data&&view==="budget"&&(!isPro?(
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32,textAlign:"center" as const}}>
+              <div style={{fontSize:48}}>💰</div>
+              <div style={{fontWeight:800,fontSize:20,color:"#fff",marginBottom:4}}>Budget Advisor is Pro</div>
+              <div style={{fontSize:13,color:"#3a5068",maxWidth:360,lineHeight:1.6,marginBottom:8}}>
+                Tell us your budget and we instantly find the best pack by real buyback EV — the actual cash you'd get after ALL fees. Never overpay again.
+              </div>
+              <button onClick={()=>setShowUpgrade(true)}
+                style={{padding:"12px 32px",background:"#00ff87",border:"none",borderRadius:10,fontWeight:800,fontSize:14,color:"#000",cursor:"pointer",fontFamily:"monospace"}}>
+                ⚡ Unlock Budget Advisor →
+              </button>
+              <div style={{fontSize:10,color:"#3a5068",fontFamily:"monospace"}}>From $19/mo · Cancel anytime</div>
+            </div>
+          ):(
             <div style={{flex:1,overflowY:"auto",padding:16}}>
               <h2 style={{fontWeight:800,fontSize:20,color:"#fff",marginBottom:6}}>💰 Budget Advisor</h2>
               <p style={{fontSize:12,color:"#3a5068",lineHeight:1.6,maxWidth:560,marginBottom:16}}>Tell us your budget. We find the best pack ranked by real buyback EV — actual cash after all fees.</p>
@@ -908,7 +1099,7 @@ function Dashboard(){
                 );
               })}
             </div>
-          )}
+          ))}
 
           {/* ═══ PULL FEED ═══ */}
           {data&&view==="feed"&&(
@@ -972,7 +1163,7 @@ function Dashboard(){
                     <div style={{fontWeight:800,fontSize:14,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{p.name}</div>
                     <div style={{fontSize:9,color:"#3a5068",marginTop:1,...M}}>{p.categoryTitle??p.category} · ${p.price}/pack · {p.pullCount??p.totalPulls??0} pulls</div>
                   </div>
-                  <button className={`bell${hasAlert?" on":""}`} onClick={()=>toggleAlert(p.id)}>{hasAlert?"🔔":"🔕"}</button>
+                  <button className={`bell${hasAlert?" on":""}`} onClick={()=>isPro?toggleAlert(p.id):setShowUpgrade(true)} title={isPro?"Toggle alert":"Pro feature"}>{hasAlert?"🔔":"🔕"}</button>
                   <button className="dp-x" onClick={()=>setSel(null)}>✕</button>
                 </div>
                 <div className="dp-scroll">
@@ -983,7 +1174,7 @@ function Dashboard(){
                   </div>
                   <div className="dp-sec">
                     <span className="dp-lbl">EV RATIO TREND · 1m</span>
-                    <EVChart pack={p} histData={histData}/>
+                    <ProGate onUpgrade={()=>setShowUpgrade(true)}><EVChart pack={p} histData={histData}/></ProGate>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#3a5068",...M}}>
                       <span>Earlier ←</span><span style={{color:evColor2,fontWeight:700}}>Now: {$x(p.evRatio)}</span>
                     </div>
@@ -1039,5 +1230,11 @@ function Dashboard(){
 }
 
 export default function App(){
-  return <QueryClientProvider client={queryClient}><Dashboard/></QueryClientProvider>;
+  return(
+    <ClerkProvider publishableKey={CLERK_KEY}>
+      <QueryClientProvider client={queryClient}>
+        <Dashboard/>
+      </QueryClientProvider>
+    </ClerkProvider>
+  );
 }
